@@ -78,9 +78,9 @@ BOOL guac_rdp_pointer_set(rdpContext* context, const rdpPointer* pointer) {
     guac_rdp_client* rdp_client = (guac_rdp_client*) client->data;
 
     /* Set cursor */
+    guac_common_display_layer* layer = pointer->layer;
     guac_common_cursor_set_surface(rdp_client->display->cursor,
-            pointer->xPos, pointer->yPos,
-            ((guac_rdp_pointer*) pointer)->layer->surface);
+            pointer->xPos, pointer->yPos, layer->surface);
 
     return TRUE;
 

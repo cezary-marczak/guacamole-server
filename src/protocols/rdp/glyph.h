@@ -44,19 +44,7 @@
 /**
  * Guacamole-specific rdpGlyph data.
  */
-typedef struct guac_rdp_glyph {
-
-    /**
-     * FreeRDP glyph data - MUST GO FIRST.
-     */
-    rdpGlyph glyph;
-
-    /**
-     * Cairo surface layer containing cached image data.
-     */
-    cairo_surface_t* surface;
-
-} guac_rdp_glyph;
+typedef rdpGlyph guac_rdp_glyph;
 
 /**
  * Caches the given glyph. Note that this caching currently only occurs server-

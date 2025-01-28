@@ -184,24 +184,65 @@ typedef struct guac_rdp_client {
  * Client data that will remain accessible through the RDP context.
  * This should generally include data commonly used by FreeRDP handlers.
  */
+//typedef struct rdp_freerdp_context {
+//
+//    /**
+//     * The parent context. THIS MUST BE THE FIRST ELEMENT.
+//     */
+//    rdpContext _p;
+//
+//    /**
+//     * Pointer to the guac_client instance handling the RDP connection with
+//     * this context.
+//     */
+//    guac_client* client;
+//
+//    /**
+//     * The current color palette, as received from the RDP server.
+//     */
+//    UINT32 palette[256];
+//
+//} rdp_freerdp_context;
+
 typedef struct rdp_freerdp_context {
+    rdpContext context;
 
-    /**
-     * The parent context. THIS MUST BE THE FIRST ELEMENT.
-     */
-    rdpContext _p;
+    void* pdata;
 
-    /**
-     * Pointer to the guac_client instance handling the RDP connection with
-     * this context.
-     */
-    guac_client* client;
+    RdpeiClientContext* rdpei;
+    void* gfx_proxy;
+    void* gfx_decoder;
+    DispClientContext* disp;
+    CliprdrClientContext* cliprdr;
+    void* rail;
 
-    /**
-     * The current color palette, as received from the RDP server.
+    /*
+     * In a case when freerdp_connect fails,
+     * Used for NLA fallback feature, to check if the server should close the connection.
+     * When it is set to TRUE, proxy's client knows it shouldn't signal the server thread to
+     * closed the connection when pf_client_post_disconnect is called, because it is trying to
+     * connect reconnect without NLA. It must be set to TRUE before the first try, and to FALSE
+     * after the connection fully established, to ensure graceful shutdown of the connection
+     * when it will be closed.
      */
+    BOOL allow_next_conn_failure;
+
+    /* session capture */
+    char* frames_dir;
+    UINT64 frames_count;
+
+    wHashTable* vc_ids; /* channel_name -> channel_id map */
+
+    BOOL input_state_sync_pending;
+    UINT32 input_state;
+
+
+    guac_client * client;
     UINT32 palette[256];
-
+    rdpUpdate* additional_update;
+    rdpBitmap* bitmap;
+    rdpGlyph* glyph;
+    rdpPointer* pointer;
 } rdp_freerdp_context;
 
 /**
@@ -217,6 +258,8 @@ typedef struct rdp_freerdp_context {
  *     ignored.
  */
 void* guac_rdp_client_thread(void* data);
+
+BOOL rdp_freerdp_pre_connect(freerdp* instance);
 
 #endif
 

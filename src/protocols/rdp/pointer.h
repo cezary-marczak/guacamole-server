@@ -29,19 +29,7 @@
 /**
  * Guacamole-specific rdpPointer data.
  */
-typedef struct guac_rdp_pointer {
-
-    /**
-     * FreeRDP pointer data - MUST GO FIRST.
-     */
-    rdpPointer pointer;
-
-    /**
-     * The display layer containing cached image data.
-     */
-    guac_common_display_layer* layer;
-
-} guac_rdp_pointer;
+typedef rdpPointer guac_rdp_pointer;
 
 /**
  * Caches a new pointer, which can later be set via guac_rdp_pointer_set() as

@@ -31,6 +31,7 @@
 #include <guacamole/plugin.h>
 #include <guacamole/protocol.h>
 #include <guacamole/socket.h>
+#include <guacamole/string.h>
 #include <guacamole/user.h>
 
 #ifdef ENABLE_SSL
@@ -44,6 +45,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <dlfcn.h>
 
 /**
  * Behaves exactly as write(), but writes as much as possible, returning
@@ -392,6 +394,7 @@ void* guacd_connection_thread(void* data) {
     socket = guac_socket_open(connected_socket_fd);
 #endif
 
+
     /* Route connection according to Guacamole, creating a new process if needed */
     if (guacd_route_connection(map, socket))
         guac_socket_free(socket);
@@ -401,3 +404,73 @@ void* guacd_connection_thread(void* data) {
 
 }
 
+void* guacd_native_connection_thread(void* data) {
+
+    guacd_connection_thread_params* params = (guacd_connection_thread_params*) data;
+
+    int connected_socket_fd = params->connected_socket_fd;
+
+//    guac_socket* socket = guac_socket_open(connected_socket_fd);
+//    if (socket == NULL) {
+//        guacd_log(GUAC_LOG_ERROR, "Unable to open socket");
+//        close(connected_socket_fd);
+//        free(params);
+//        return NULL;
+//    }
+
+    /* Associate new client */
+    guac_client* client = guac_client_alloc();
+    if (client == NULL) {
+        guacd_log(GUAC_LOG_ERROR, "Failed to alloc guac_client");
+        close(connected_socket_fd);
+        free(params);
+        return NULL;
+    }
+
+    /* Init logging */
+    client->log_handler = guacd_client_log;
+
+    /* Reference to dlopen()'d plugin */
+    void* client_plugin_handle;
+
+    /* Pluggable client */
+    const char* protocol_lib = GUAC_PROTOCOL_LIBRARY_PREFIX "rdp";
+
+    /* Type-pun for the sake of dlsym() - cannot typecast a void* to a function
+     * pointer otherwise */
+    union {
+        guac_rdp_proxy_connect_handler* proxy_connect;
+        void* obj;
+    } alias;
+
+    /* Load client plugin */
+    client_plugin_handle = dlopen(protocol_lib, RTLD_LAZY);
+    if (!client_plugin_handle) {
+        guac_error = GUAC_STATUS_NOT_FOUND;
+        guac_error_message = dlerror();
+        return NULL;
+    }
+
+    dlerror(); /* Clear errors */
+
+    /* Get init function */
+    alias.obj = dlsym(client_plugin_handle, "guac_rdp_proxy_connect");
+
+    /* Fail if cannot find guac_rdp_proxy_connect */
+    if (dlerror() != NULL) {
+        guac_error = GUAC_STATUS_INTERNAL_ERROR;
+        guac_error_message = dlerror();
+        dlclose(client_plugin_handle);
+        return NULL;
+    }
+
+    /* Init client */
+    client->__plugin_handle = client_plugin_handle;
+
+    int ret = alias.proxy_connect(client, connected_socket_fd);
+    if (ret) {
+        guacd_log(GUAC_LOG_ERROR, "guac_rdp_proxy_connect failed");
+    }
+
+    return NULL;
+}

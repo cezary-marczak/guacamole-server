@@ -291,9 +291,11 @@ BOOL guac_rdp_gdi_memblt(rdpContext* context, MEMBLT_ORDER* memblt) {
             }
 
             /* Otherwise, copy */
-            else
-                guac_common_surface_copy(bitmap->layer->surface,
-                        x_src, y_src, w, h, current_surface, x, y);
+            else {
+                guac_common_display_layer* layer = bitmap->layer;
+                guac_common_surface_copy(layer->surface,
+                                         x_src, y_src, w, h, current_surface, x, y);
+            }
 
             /* Increment usage counter */
             ((guac_rdp_bitmap*) bitmap)->used++;
@@ -313,7 +315,8 @@ BOOL guac_rdp_gdi_memblt(rdpContext* context, MEMBLT_ORDER* memblt) {
             if (bitmap->layer == NULL)
                 guac_rdp_cache_bitmap(context, memblt->bitmap);
 
-            guac_common_surface_transfer(bitmap->layer->surface,
+            guac_common_display_layer* layer = bitmap->layer;
+            guac_common_surface_transfer(layer->surface,
                     x_src, y_src, w, h,
                     guac_rdp_rop3_transfer_function(client, memblt->bRop),
                     current_surface, x, y);

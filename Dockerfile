@@ -39,7 +39,6 @@ RUN apk add --no-cache                \
         libtool                       \
         libwebp-dev                   \
         make                          \
-        openssl1.1-compat-dev         \
         pango-dev                     \
         pulseaudio-dev                \
         util-linux-dev                \
@@ -49,8 +48,7 @@ RUN apk add --no-cache                \
         krb5-dev \
         libgss \
         krb5-conf \
-        musl-dev \
-        util-linux-dev
+        musl-dev
 
 # Copy source to container for sake of build
 # ARG BUILD_DIR=/tmp/guacamole-server

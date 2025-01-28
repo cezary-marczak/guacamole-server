@@ -27,6 +27,7 @@
 #include "rdp.h"
 #include "settings.h"
 #include "user.h"
+#include <freerdp/server/proxy.h>
 
 #ifdef ENABLE_COMMON_SSH
 #include "common-ssh/sftp.h"
@@ -181,7 +182,9 @@ int guac_rdp_client_free_handler(guac_client* client) {
     guac_rdp_client* rdp_client = (guac_rdp_client*) client->data;
 
     /* Wait for client thread */
-    pthread_join(rdp_client->client_thread, NULL);
+    if (rdp_client->client_thread) {
+        pthread_join(rdp_client->client_thread, NULL);
+    }
 
     /* Free parsed settings */
     if (rdp_client->settings != NULL) {
@@ -254,3 +257,170 @@ int guac_rdp_client_free_handler(guac_client* client) {
 
 }
 
+int guac_rdp_proxy_connect(guac_client* client, int fd) {
+
+    /* Automatically set HOME environment variable if unset (FreeRDP's
+     * initialization process will fail within freerdp_settings_new() if this
+     * is unset) */
+    const char* current_home = getenv("HOME");
+    if (current_home == NULL) {
+
+        /* Warn if the correct home directory cannot be determined */
+        struct passwd* passwd = getpwuid(getuid());
+        if (passwd == NULL)
+            guac_client_log(client, GUAC_LOG_WARNING, "FreeRDP initialization "
+                                                      "may fail: The \"HOME\" environment variable is unset and "
+                                                      "its correct value could not be automatically determined: "
+                                                      "%s", strerror(errno));
+
+            /* Warn if the correct home directory could be determined but can't be
+             * assigned */
+        else if (setenv("HOME", passwd->pw_dir, 1))
+            guac_client_log(client, GUAC_LOG_WARNING, "FreeRDP initialization "
+                                                      "may fail: The \"HOME\" environment variable is unset "
+                                                      "and its correct value (detected as \"%s\") could not be "
+                                                      "assigned: %s", passwd->pw_dir, strerror(errno));
+
+            /* HOME has been successfully set */
+        else {
+            guac_client_log(client, GUAC_LOG_DEBUG, "\"HOME\" "
+                                                    "environment variable was unset and has been "
+                                                    "automatically set to \"%s\"", passwd->pw_dir);
+            current_home = passwd->pw_dir;
+        }
+    }
+
+    /* Verify that detected home directory is actually writable and actually a
+     * directory, as FreeRDP initialization will mysteriously fail otherwise */
+    if (current_home != NULL && !is_writable_directory(current_home)) {
+        if (errno == EACCES)
+            guac_client_log(client, GUAC_LOG_WARNING, "FreeRDP initialization "
+                                                      "may fail: The current user's home directory (\"%s\") is "
+                                                      "not writable, but FreeRDP generally requires a writable "
+                                                      "home directory for storage of configuration files and "
+                                                      "certificates.", current_home);
+        else if (errno == ENOTDIR)
+            guac_client_log(client, GUAC_LOG_WARNING, "FreeRDP initialization "
+                                                      "may fail: The current user's home directory (\"%s\") is "
+                                                      "not actually a directory, but FreeRDP generally requires "
+                                                      "a writable home directory for storage of configuration "
+                                                      "files and certificates.", current_home);
+        else
+            guac_client_log(client, GUAC_LOG_WARNING, "FreeRDP initialization "
+                                                      "may fail: Writability of the current user's home "
+                                                      "directory (\"%s\") could not be determined: %s",
+                            current_home, strerror(errno));
+    }
+
+    /* Set client args */
+    client->args = GUAC_RDP_CLIENT_ARGS;
+
+    /* Alloc client data */
+    guac_rdp_client* rdp_client = calloc(1, sizeof(guac_rdp_client));
+    client->data = rdp_client;
+
+    /* Init display update module */
+    rdp_client->disp = guac_rdp_disp_alloc(client);
+
+    /* Redirect FreeRDP log messages to guac_client_log() */
+    guac_rdp_redirect_wlog(client);
+
+    /* Recursive attribute for locks */
+    pthread_mutexattr_init(&(rdp_client->attributes));
+    pthread_mutexattr_settype(&(rdp_client->attributes),
+                              PTHREAD_MUTEX_RECURSIVE);
+
+    /* Init required locks */
+    pthread_rwlock_init(&(rdp_client->lock), NULL);
+    pthread_mutex_init(&(rdp_client->message_lock), &(rdp_client->attributes));
+
+    /* Set handlers */
+    client->free_handler = guac_rdp_client_free_handler;
+
+    guac_rdp_settings* settings = rdp_client->settings;
+    /* Set up screen recording, if requested */
+    if (settings->recording_path != NULL) {
+        rdp_client->recording = guac_recording_create(client,
+                                                      settings->recording_path,
+                                                      settings->recording_name,
+                                                      settings->create_recording_path,
+                                                      !settings->recording_exclude_output,
+                                                      !settings->recording_exclude_mouse,
+                                                      !settings->recording_exclude_touch,
+                                                      settings->recording_include_keys);
+    }
+
+    /* Init random number generator */
+    srandom(time(NULL));
+
+    /* Create display */
+    rdp_client->display = guac_common_display_alloc(client,
+                                                    rdp_client->settings->width,
+                                                    rdp_client->settings->height);
+
+    /* Use lossless compression only if requested (otherwise, use default
+     * heuristics) */
+    guac_common_display_set_lossless(rdp_client->display, settings->lossless);
+
+    rdp_client->current_surface = rdp_client->display->default_surface;
+
+    rdp_client->available_svc = guac_common_list_alloc();
+
+    /* Load keymap into client */
+    rdp_client->keyboard = guac_rdp_keyboard_alloc(client,
+                                                   settings->server_layout);
+
+    /* Set default pointer */
+    guac_common_cursor_set_pointer(rdp_client->display->cursor);
+
+    /* Signal that reconnect has been completed */
+    guac_rdp_disp_reconnect_complete(rdp_client->disp);
+
+    proxyConfig* cfg = pf_server_config_load("/src/config.ini");
+    if (!cfg) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Proxy config load failed from /src/config.ini");
+        close(fd);
+        return -1;
+    }
+
+    proxyServer* proxy_srv = pf_server_new(cfg);
+    if (!proxy_srv) {
+        guac_client_log(client, GUAC_LOG_ERROR, "pf_server_new failed");
+        close(fd);
+        return -1;
+    }
+
+//    proxy_srv->guacamole_client = params->client;
+//    proxy_srv->pre_connect = rdp_freerdp_pre_connect;
+
+    int ret = pf_server_start_with_peer_socket(proxy_srv, fd);
+    if (!ret) {
+        guac_client_log(client, GUAC_LOG_ERROR, "pf_server_start_with_peer_socket failed");
+        close(fd);
+        return -1;
+    }
+
+    /* Clean up print job, if active */
+    if (rdp_client->active_job != NULL) {
+        guac_rdp_print_job_kill(rdp_client->active_job);
+        guac_rdp_print_job_free(rdp_client->active_job);
+    }
+
+    /* Free SVC list */
+    guac_common_list_free(rdp_client->available_svc);
+    rdp_client->available_svc = NULL;
+
+    /* Free RDP keyboard state */
+    guac_rdp_keyboard_free(rdp_client->keyboard);
+    rdp_client->keyboard = NULL;
+
+    /* Free display */
+    guac_common_display_free(rdp_client->display);
+    rdp_client->display = NULL;
+
+    pf_server_free(proxy_srv);
+    guac_client_free(client);
+
+    return 0;
+
+}

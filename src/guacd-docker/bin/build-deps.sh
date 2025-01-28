@@ -70,6 +70,7 @@ install_from_git() {
 
     # Clone repository and change to top-level directory of source
     cd /tmp
+    rm -rf $REPO_DIR
     git clone "$URL"
     cd $REPO_DIR/
 
@@ -144,7 +145,7 @@ install_freerdp_from_git() {
 # Build and install core protocol library dependencies
 #
 
-install_freerdp_from_git "https://github.com/FreeRDP/FreeRDP" "$WITH_FREERDP" $FREERDP_OPTS
+#install_freerdp_from_git "https://github.com/FreeRDP/FreeRDP" "$WITH_FREERDP" $FREERDP_OPTS
 install_from_git "https://github.com/libssh2/libssh2" "$WITH_LIBSSH2" $LIBSSH2_OPTS
 install_from_git "https://github.com/seanmiddleditch/libtelnet" "$WITH_LIBTELNET" $LIBTELNET_OPTS
 install_from_git "https://github.com/LibVNC/libvncserver" "$WITH_LIBVNCCLIENT" $LIBVNCCLIENT_OPTS

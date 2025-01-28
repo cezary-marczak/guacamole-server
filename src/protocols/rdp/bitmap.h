@@ -31,24 +31,7 @@
 /**
  * Guacamole-specific rdpBitmap data.
  */
-typedef struct guac_rdp_bitmap {
-
-    /**
-     * FreeRDP bitmap data - MUST GO FIRST.
-     */
-    rdpBitmap bitmap;
-
-    /**
-     * Layer containing cached image data.
-     */
-    guac_common_display_layer* layer;
-
-    /**
-     * The number of times a bitmap has been used.
-     */
-    int used;
-
-} guac_rdp_bitmap;
+typedef rdpBitmap guac_rdp_bitmap;
 
 /**
  * Caches the given bitmap immediately, storing its data in a remote Guacamole

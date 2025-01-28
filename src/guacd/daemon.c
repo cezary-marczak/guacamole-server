@@ -323,10 +323,47 @@ static void guacd_openssl_free_locks(int count) {
 #endif
 #endif
 
+void* listen_native_rdp(void* params) {
+    int socket = (int)((intptr_t)params);
+
+    struct sockaddr_in client_addr;
+    socklen_t client_addr_len;
+    int connected_socket_fd;
+
+    /* Daemon loop */
+    for (;;) {
+        pthread_t child_thread;
+
+        /* Accept connection */
+        client_addr_len = sizeof(client_addr);
+        connected_socket_fd = accept(socket, (struct sockaddr*) &client_addr, &client_addr_len);
+
+        if (connected_socket_fd < 0) {
+            guacd_log(GUAC_LOG_ERROR, "Could not accept client connection: %s", strerror(errno));
+            continue;
+        }
+
+        /* Create parameters for connection thread */
+        guacd_connection_thread_params* params = malloc(sizeof(guacd_connection_thread_params));
+        if (params == NULL) {
+            guacd_log(GUAC_LOG_ERROR, "Could not create connection thread: %s", strerror(errno));
+            continue;
+        }
+
+//        params->map = map;
+        params->connected_socket_fd = connected_socket_fd;
+
+        /* Spawn thread to handle connection */
+        pthread_create(&child_thread, NULL, guacd_native_connection_thread, params);
+        pthread_detach(child_thread);
+    }
+}
+
 int main(int argc, char* argv[]) {
 
     /* Server */
     int socket_fd;
+    int native_socket_fd;
     struct addrinfo* addresses;
     struct addrinfo* current_address;
     char bound_address[1024];
@@ -446,6 +483,78 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    /* Get addresses for binding */
+    if ((retval = getaddrinfo(config->bind_host, "3389",
+                              &hints, &addresses))) {
+
+        guacd_log(GUAC_LOG_ERROR, "Error parsing given address or port: %s",
+                  gai_strerror(retval));
+        exit(EXIT_FAILURE);
+
+    }
+
+    current_address = addresses;
+    while (current_address != NULL) {
+        int retval;
+
+        /* Resolve hostname */
+        if ((retval = getnameinfo(current_address->ai_addr,
+                                  current_address->ai_addrlen,
+                                  bound_address, sizeof(bound_address),
+                                  bound_port, sizeof(bound_port),
+                                  NI_NUMERICHOST | NI_NUMERICSERV)))
+            guacd_log(GUAC_LOG_ERROR, "Unable to resolve host: %s",
+                      gai_strerror(retval));
+
+        /* Get socket */
+        native_socket_fd = socket(current_address->ai_family, SOCK_STREAM, 0);
+        if (native_socket_fd < 0) {
+            guacd_log(GUAC_LOG_ERROR, "Error opening native socket: %s", strerror(errno));
+
+            /* Unable to get a socket for the resolved address family, try next */
+            current_address = current_address->ai_next;
+            continue;
+        }
+
+        /* Allow socket reuse */
+        if (setsockopt(native_socket_fd, SOL_SOCKET, SO_REUSEADDR,
+                       (void*) &opt_on, sizeof(opt_on))) {
+            guacd_log(GUAC_LOG_WARNING, "Unable to set native socket options for reuse: %s",
+                      strerror(errno));
+        }
+
+        /* Attempt to bind socket to address */
+        if (bind(native_socket_fd,
+                 current_address->ai_addr,
+                 current_address->ai_addrlen) == 0) {
+
+            guacd_log(GUAC_LOG_DEBUG, "Successfully bound native "
+                                      "%s socket to host %s, port %s",
+                      (current_address->ai_family == AF_INET) ? "AF_INET" : "AF_INET6",
+                      bound_address, bound_port);
+
+            /* Done if successful bind */
+            break;
+        }
+
+        /* Otherwise log information regarding bind failure */
+        close(native_socket_fd);
+        native_socket_fd = -1;
+        guacd_log(GUAC_LOG_DEBUG, "Unable to bind native %s socket to "
+                                  "host %s, port %s: %s",
+                  (current_address->ai_family == AF_INET) ? "AF_INET" : "AF_INET6",
+                  bound_address, bound_port, strerror(errno));
+
+        /* Try next address */
+        current_address = current_address->ai_next;
+    }
+
+    /* If unable to bind to anything, fail */
+    if (current_address == NULL) {
+        guacd_log(GUAC_LOG_ERROR, "Unable to bind native socket to any addresses.");
+        exit(EXIT_FAILURE);
+    }
+
 #ifdef ENABLE_SSL
     /* Init SSL if enabled */
     if (config->key_file != NULL || config->cert_file != NULL) {
@@ -542,6 +651,15 @@ int main(int argc, char* argv[]) {
         return 3;
     }
 
+    /* Listen for connections */
+    if (listen(native_socket_fd, 5) < 0) {
+        guacd_log(GUAC_LOG_ERROR, "Could not listen on native socket: %s", strerror(errno));
+        return 3;
+    }
+
+    pthread_t native_listen_thread;
+    pthread_create(&native_listen_thread, NULL, listen_native_rdp, (void*) ((intptr_t)native_socket_fd));
+
     /* Daemon loop */
     for (;;) {
 
@@ -595,4 +713,3 @@ int main(int argc, char* argv[]) {
     return 0;
 
 }
-

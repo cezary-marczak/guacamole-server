@@ -159,9 +159,8 @@ BOOL guac_rdp_bitmap_setsurface(rdpContext* context, rdpBitmap* bitmap, BOOL pri
         if (((guac_rdp_bitmap*) bitmap)->layer == NULL)
             guac_rdp_cache_bitmap(context, bitmap);
 
-        rdp_client->current_surface =
-            ((guac_rdp_bitmap*) bitmap)->layer->surface;
-
+        guac_common_display_layer* layer = ((guac_rdp_bitmap*) bitmap)->layer;
+        rdp_client->current_surface = layer->surface;
     }
 
     return TRUE;
