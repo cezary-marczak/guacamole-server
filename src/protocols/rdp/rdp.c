@@ -82,6 +82,75 @@
 #include <stdlib.h>
 #include <time.h>
 
+static void print_settings_all(const rdpSettings* settings) {
+    size_t x;
+    SSIZE_T type = 0;
+
+    printf("%s\t%50s\t%s\t%s", "<index>", "<key>", "<type>", "<default value>\n");
+    for (x = 0; x < FreeRDP_Settings_StableAPI_MAX; x++)
+    {
+        const char* name = freerdp_settings_get_name_for_key(x);
+        type = freerdp_settings_get_type_for_key(x);
+
+        switch (type)
+        {
+            case RDP_SETTINGS_TYPE_BOOL:
+                printf("%" PRIuz "\t%50s\tBOOL\t%s\n", x, name,
+                       freerdp_settings_get_bool(settings, x) ? "TRUE" : "FALSE");
+                break;
+            case RDP_SETTINGS_TYPE_UINT16:
+                printf("%" PRIuz "\t%50s\tUINT16\t%" PRIu16 "\n", x, name,
+                       freerdp_settings_get_uint16(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_INT16:
+                printf("%" PRIuz "\t%50s\tINT16\t%" PRId16 "\n", x, name,
+                       freerdp_settings_get_int16(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_UINT32:
+                printf("%" PRIuz "\t%50s\tUINT32\t%" PRIu32 "\n", x, name,
+                       freerdp_settings_get_uint32(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_INT32:
+                printf("%" PRIuz "\t%50s\tINT32\t%" PRId32 "\n", x, name,
+                       freerdp_settings_get_int32(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_UINT64:
+                printf("%" PRIuz "\t%50s\tUINT64\t%" PRIu64 "\n", x, name,
+                       freerdp_settings_get_uint64(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_INT64:
+                printf("%" PRIuz "\t%50s\tINT64\t%" PRId64 "\n", x, name,
+                       freerdp_settings_get_int64(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_STRING:
+                printf("%" PRIuz "\t%50s\tSTRING\t%s"
+                       "\n",
+                       x, name, freerdp_settings_get_string(settings, x));
+                break;
+            case RDP_SETTINGS_TYPE_POINTER:
+                const void* pointer = freerdp_settings_get_pointer(settings, x);
+                if (x == FreeRDP_OrderSupport) {
+                    const BYTE* bp = (const BYTE*)pointer;
+                    printf("%" PRIuz "\t%50s\tBYTE\t0x",
+                           x, name);
+                    for (int li = 0; li < 32; li++)
+                    {
+                        printf("%01X", *bp);
+                        bp++;
+                    }
+                    printf("\n");
+                }
+                printf("%" PRIuz "\t%50s\tPOINTER\t%p"
+                       "\n",
+                       x, name, pointer);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+
 BOOL rdp_freerdp_pre_connect(freerdp* instance) {
 
     rdpContext* context = instance->context;
@@ -145,6 +214,8 @@ BOOL rdp_freerdp_pre_connect(freerdp* instance) {
                 "Failed to load drdynvc plugin. Display update and audio "
                 "input support will be disabled.");
     }
+
+    print_settings_all(instance->settings);
 
     /* Init FreeRDP internal GDI implementation */
     if (!gdi_init(instance, guac_rdp_get_native_pixel_format(FALSE)))

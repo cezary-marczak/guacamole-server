@@ -38,7 +38,7 @@ void test_client__layer_pool() {
     guac_layer* layer;
 
     /* Get client */
-    client = guac_client_alloc();
+    client = guac_client_alloc(0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(client);
 
     /* Fill pool */

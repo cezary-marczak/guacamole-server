@@ -32,6 +32,7 @@ RUN apk add --no-cache                \
         build-base                    \
         cairo-dev                     \
         cmake                         \
+        ninja                      \
         git                           \
         grep                          \
         libjpeg-turbo-dev             \
@@ -43,16 +44,14 @@ RUN apk add --no-cache                \
         pulseaudio-dev                \
         util-linux-dev                \
         ffmpeg-dev \
+    openssl-dev \
+    openssl \
         krb5-libs \
         krb5 \
         krb5-dev \
         libgss \
         krb5-conf \
         musl-dev
-
-# Copy source to container for sake of build
-# ARG BUILD_DIR=/tmp/guacamole-server
-# COPY . ${BUILD_DIR}
 
 #
 # Base directory for installed build artifacts.
@@ -62,12 +61,115 @@ RUN apk add --no-cache                \
 #
 ARG PREFIX_DIR=/opt/guacamole
 
+WORKDIR /tmp
+RUN echo "" > /tmp/toolchain.cmake
+
+# Clone and build zlib following exact steps
+RUN git clone --depth 1 -b v1.3 https://github.com/madler/zlib.git && \
+    cmake -GNinja \
+    -DCMAKE_TOOLCHAIN_FILE=/tmp/toolchain.cmake \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
+    -B zlib-build \
+    -S zlib \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR \
+    -DLIBRESSL_APPS=OFF \
+    -DLIBRESSL_TESTS=OFF && \
+    cmake --build zlib-build -j4 || cmake --build zlib-build && \
+    cmake --install zlib-build && \
+    rm -rf zlib zlib-build
+
+# Clone and build uriparser following exact steps
+RUN git clone --depth 1 -b uriparser-0.9.7 https://github.com/uriparser/uriparser.git && \
+    cmake -GNinja \
+    -DCMAKE_TOOLCHAIN_FILE=/tmp/toolchain.cmake \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
+    -B uriparser-build \
+    -S uriparser \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR \
+    -DURIPARSER_BUILD_DOCS=OFF \
+    -DURIPARSER_BUILD_TESTS=OFF && \
+    cmake --build uriparser-build -j4 || cmake --build uriparser-build && \
+    cmake --install uriparser-build && \
+    rm -rf uriparser uriparser-build
+
+# Clone and build cJSON following exact steps
+RUN git clone --depth 1 -b v1.7.16 https://github.com/DaveGamble/cJSON.git && \
+    cmake -GNinja \
+    -DCMAKE_TOOLCHAIN_FILE=/tmp/toolchain.cmake \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
+    -B cJSON-build \
+    -S cJSON \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR \
+    -DENABLE_CJSON_TEST=OFF \
+    -DBUILD_SHARED_AND_STATIC_LIBS=ON && \
+    cmake --build cJSON-build -j4 || cmake --build cJSON-build && \
+    cmake --install cJSON-build && \
+    rm -rf cJSON cJSON-build
+
+# Clone and build SDL2
+RUN git clone --depth 1 -b release-2.28.1 https://github.com/libsdl-org/SDL.git && \
+    cmake -GNinja \
+        -DCMAKE_TOOLCHAIN_FILE=/tmp/toolchain.cmake \
+        -DCMAKE_VERBOSE_MAKEFILE=ON \
+        -B SDL-build \
+        -S SDL \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+        -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR \
+        -DSDL_TEST=OFF \
+        -DSDL_TESTS=OFF \
+        -DSDL_STATIC_PIC=ON && \
+    cmake --build SDL-build -j4 || cmake --build SDL-build && \
+    cmake --install SDL-build && \
+    rm -rf SDL SDL-build
+
+# Clone and build SDL2_ttf
+RUN git clone --depth 1 --recurse-submodules -b release-2.20.2 https://github.com/libsdl-org/SDL_ttf.git && \
+    cmake -GNinja \
+        -DCMAKE_TOOLCHAIN_FILE=/tmp/toolchain.cmake \
+        -DCMAKE_VERBOSE_MAKEFILE=ON \
+        -B SDL_ttf-build \
+        -S SDL_ttf \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+        -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR \
+        -DSDL2TTF_HARFBUZZ=ON \
+        -DSDL2TTF_FREETYPE=ON \
+        -DSDL2TTF_VENDORED=ON \
+        -DFT_DISABLE_ZLIB=OFF \
+        -DSDL2TTF_SAMPLES=OFF && \
+    cmake --build SDL_ttf-build -j4 || cmake --build SDL_ttf-build && \
+    cmake --install SDL_ttf-build && \
+    rm -rf SDL_ttf SDL_ttf-build
+
+# Clone and build SDL2_image
+RUN git clone --depth 1 --recurse-submodules -b release-2.8.1 https://github.com/libsdl-org/SDL_image.git && \
+    cmake -GNinja \
+        -DCMAKE_TOOLCHAIN_FILE=/tmp/toolchain.cmake \
+        -DCMAKE_VERBOSE_MAKEFILE=ON \
+        -B SDL_image-build \
+        -S SDL_image \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+        -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR \
+        -DSDL2IMAGE_SAMPLES=OFF \
+        -DSDL2IMAGE_DEPS_SHARED=OFF && \
+    cmake --build SDL_image-build -j4 || cmake --build SDL_image-build && \
+    cmake --install SDL_image-build && \
+    rm -rf SDL_image SDL_image-build
+
 #
 # Automatically select the latest versions of each core protocol support
 # library (these can be overridden at build time if a specific version is
 # needed)
 #
-ARG WITH_FREERDP='2\.11\.7'
+ARG WITH_FREERDP='f5f678fb9aa06769dea94d6ab1a940fbd509d534'
 ARG WITH_LIBSSH2='libssh2-\d+(\.\d+)+'
 ARG WITH_LIBTELNET='\d+(\.\d+)+'
 ARG WITH_LIBVNCCLIENT='LibVNCServer-\d+(\.\d+)+'
@@ -100,7 +202,7 @@ ARG FREERDP_OPTS="\
     -DWITH_OSS=OFF \
     -DWITH_PCSC=OFF \
     -DWITH_PULSE=OFF \
-    -DWITH_SERVER=OFF \
+    -DWITH_SERVER=ON \
     -DWITH_SERVER_INTERFACE=OFF \
     -DWITH_SHADOW_MAC=OFF \
     -DWITH_SHADOW_X11=OFF \
@@ -123,8 +225,7 @@ ARG FREERDP_OPTS="\
     -DDEBUG_NLA=ON \
     -DGSS_ROOT_FLAVOUR=MIT"
 
-ARG GUACAMOLE_SERVER_OPTS="\
-    --disable-guaclog"
+ARG GUACAMOLE_SERVER_OPTS=""
 
 ARG LIBSSH2_OPTS="\
     -DBUILD_EXAMPLES=OFF \
@@ -146,18 +247,19 @@ ARG LIBWEBSOCKETS_OPTS="\
     -DLWS_WITHOUT_TEST_SERVER_EXTPOLL=ON \
     -DLWS_WITH_STATIC=OFF"
 
-ARG BUILD_DIR=/tmp/guacamole-server
-
 # Build the dependencies for guacamole-server
+ARG BUILD_DIR=/opt/guacamole/guacamole-server
 RUN mkdir -p ${BUILD_DIR}/src/guacd-docker/bin
+
+ARG DOCKER_GITCONFIG="./.dgitconfig"
+COPY ${DOCKER_GITCONFIG} /root/.gitconfig
+
 COPY ./src/guacd-docker/bin/build-deps.sh ${BUILD_DIR}/src/guacd-docker/bin
-COPY ./src/guacd-docker/freerdp.patch ${BUILD_DIR}/freerdp.patch
 RUN ${BUILD_DIR}/src/guacd-docker/bin/build-deps.sh
 RUN rm -f ${BUILD_DIR}/src/guacd-docker/bin/build-deps.sh
 
 # Copy source to container for sake of build
 COPY . ${BUILD_DIR}
-
 # Build guacamole-server and its core protocol library dependencies
 RUN ${BUILD_DIR}/src/guacd-docker/bin/build-all.sh
 
@@ -183,10 +285,75 @@ ARG PREFIX_DIR=/opt/guacamole
 # Runtime environment
 ENV LC_ALL=C.UTF-8
 ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
+ENV PKG_CONFIG_PATH=${PREFIX_DIR}/lib/pkgconfig
 ENV GUACD_LOG_LEVEL=info
 
-# Copy build artifacts into this stage
-COPY --from=builder ${PREFIX_DIR} ${PREFIX_DIR}
+# Install dependencies
+RUN apk add --no-cache \
+    build-base \
+    cmake \
+    ninja \
+    git \
+    libx11-dev \
+    libxkbfile-dev \
+    libxi-dev \
+    libxcursor-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxrender-dev \
+    alsa-lib-dev \
+    ffmpeg-dev \
+    jpeg-dev \
+    openssl-dev \
+    zlib-dev \
+    musl-dev \
+    libc-dev \
+    wayland-dev \
+    libxkbcommon-dev \
+    libxdamage-dev \
+    libxcomposite-dev \
+    dbus-dev \
+    cups-dev \
+    pulseaudio-dev \
+    linux-headers \
+    openssl \
+    krb5 \
+    krb5-dev  \
+             util-linux-dev \
+             openssh \
+             rsync \
+             gdb \
+             cunit-dev \
+            autoconf                      \
+            automake                      \
+            build-base                    \
+            cairo-dev                     \
+            cmake                         \
+            git                           \
+            grep                          \
+            libjpeg-turbo-dev             \
+            libpng-dev                    \
+            libtool                       \
+            libwebp-dev                   \
+            make                          \
+            pango-dev                     \
+            pulseaudio-dev                \
+            util-linux-dev                \
+            ffmpeg-dev \
+            krb5-libs \
+            krb5 \
+            krb5-dev \
+            libgss \
+            krb5-conf \
+            musl-dev
+
+RUN apk add --no-cache \
+    icu \
+    icu-dev \
+    fuse3 \
+    fuse3-dev \
+    libusb \
+    libusb-dev
 
 # Bring runtime environment up to date and install runtime dependencies
 RUN apk add --no-cache                \
@@ -204,12 +371,64 @@ RUN apk add --no-cache                \
         krb5 \
         libgss \
         musl-dev \
-        util-linux-login && \
-    xargs apk add --no-cache < ${PREFIX_DIR}/DEPENDENCIES
+        util-linux-login
+
+# Copy build artifacts into this stage
+COPY --from=builder ${PREFIX_DIR} ${PREFIX_DIR}
+
+RUN xargs apk add --no-cache < ${PREFIX_DIR}/DEPENDENCIES
+
+WORKDIR ${PREFIX_DIR}
+
+# Generate SSL certificates
+RUN openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048 && \
+    openssl req -new -x509 -key private_key.pem -out certificate.pem -days 365 -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
+
+# Add configuration file with SSL settings
+RUN printf '[Server]\n\
+Host=0.0.0.0\n\
+Port=3389\n\
+\n\
+[Target]\n\
+Host=10.9.9.97\n\
+Port=3389\n\
+UseLoadBalanceInfo=TRUE\n\
+#UseLoadBalanceInfo=FALSE\n\
+\n\
+[Channels]\n\
+Clipboard=TRUE\n\
+PassthroughIsBlacklist=TRUE\n\
+DisplayControl=TRUE\n\
+AudioOutput=TRUE\n\
+GFX=FALSE\n\
+\n\
+[Input]\n\
+Keyboard=TRUE\n\
+Mouse=TRUE\n\
+\n\
+[Security]\n\
+ServerTlsSecurity=TRUE\n\
+ServerRdpSecurity=TRUE\n\
+ClientTlsSecurity=TRUE\n\
+ClientNlaSecurity=TRUE\n\
+ClientRdpSecurity=TRUE\n\
+\n\
+[Clipboard]\n\
+TextOnly=FALSE\n\
+MaxTextLength=0\n\
+\n\
+[Certificates]\n\
+CertificateFile="/src/certificate.pem"\n\
+PrivateKeyFile="/src/private_key.pem"' >> /opt/guacamole/config.ini
+
+RUN echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
+RUN echo 'PubkeyAuthentication yes' >> /etc/ssh/sshd_config
+RUN echo -n 'root:FNjkgnsdjk4trgrsd#@fs' | chpasswd
 
 # Checks the operating status every 5 minutes with a timeout of 5 seconds
 HEALTHCHECK --interval=5m --timeout=5s CMD nc -z 127.0.0.1 4822 || exit 1
-
+RUN mkdir -p /var/lib/procyon/ssl/kerberos /var/lib/procyon/recordings /var/lib/procyon/ssl/share
 # Create a new user guacd
 ARG UID=1000
 ARG GID=10001
@@ -219,15 +438,14 @@ RUN useradd --system --create-home --shell /bin/sh --uid $UID --gid $GID guacd
 # Create symlinks to procyon krb5.conf and hosts
 RUN mkdir -p /etc/procyon-tmp
 COPY ./src/guacd-docker/krb5.conf /etc/procyon-tmp/krb5.conf
-COPY ./src/guacd-docker/bin/entrypoint.sh /etc/procyon-tmp/entrypoint.sh
+COPY ./entrypoint-dev.sh /etc/procyon-tmp/entrypoint.sh
 COPY ./src/guacd-docker/bin/copy_hosts.sh /etc/procyon-tmp/copy_hosts.sh
 RUN chmod +x /etc/procyon-tmp/entrypoint.sh
 RUN chmod +x /etc/procyon-tmp/copy_hosts.sh
 
 # Expose the default listener port
 EXPOSE 4822
-
-#USER guacd
+EXPOSE 3389
 
 # Start guacd, listening on port 0.0.0.0:4822
 #
@@ -235,4 +453,3 @@ EXPOSE 4822
 # PREFIX_DIR build argument.
 #
 ENTRYPOINT [ "/etc/procyon-tmp/entrypoint.sh" ]
-CMD KRB5_TRACE=/home/guacd/kerb /opt/guacamole/sbin/guacd -b 0.0.0.0 -L $GUACD_LOG_LEVEL -f

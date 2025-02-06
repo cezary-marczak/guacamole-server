@@ -406,9 +406,11 @@ void* guacd_connection_thread(void* data) {
 
 void* guacd_native_connection_thread(void* data) {
 
+    guacd_log(GUAC_LOG_INFO, "Started native conn thread");
     guacd_connection_thread_params* params = (guacd_connection_thread_params*) data;
 
     int connected_socket_fd = params->connected_socket_fd;
+    free(params);
 
 //    guac_socket* socket = guac_socket_open(connected_socket_fd);
 //    if (socket == NULL) {
@@ -419,13 +421,13 @@ void* guacd_native_connection_thread(void* data) {
 //    }
 
     /* Associate new client */
-    guac_client* client = guac_client_alloc();
+    guac_client* client = guac_client_alloc(1);
     if (client == NULL) {
         guacd_log(GUAC_LOG_ERROR, "Failed to alloc guac_client");
         close(connected_socket_fd);
-        free(params);
         return NULL;
     }
+    guacd_log(GUAC_LOG_INFO, "Created guac_client for native");
 
     /* Init logging */
     client->log_handler = guacd_client_log;
@@ -434,7 +436,7 @@ void* guacd_native_connection_thread(void* data) {
     void* client_plugin_handle;
 
     /* Pluggable client */
-    const char* protocol_lib = GUAC_PROTOCOL_LIBRARY_PREFIX "rdp";
+    const char* protocol_lib = GUAC_PROTOCOL_LIBRARY_PREFIX "rdp" GUAC_PROTOCOL_LIBRARY_SUFFIX;
 
     /* Type-pun for the sake of dlsym() - cannot typecast a void* to a function
      * pointer otherwise */
@@ -442,6 +444,8 @@ void* guacd_native_connection_thread(void* data) {
         guac_rdp_proxy_connect_handler* proxy_connect;
         void* obj;
     } alias;
+
+    guacd_log(GUAC_LOG_INFO, "Loading client plugin: %s", protocol_lib);
 
     /* Load client plugin */
     client_plugin_handle = dlopen(protocol_lib, RTLD_LAZY);
@@ -452,6 +456,8 @@ void* guacd_native_connection_thread(void* data) {
     }
 
     dlerror(); /* Clear errors */
+
+    guacd_log(GUAC_LOG_INFO, "Loading guac_rdp_proxy_connect");
 
     /* Get init function */
     alias.obj = dlsym(client_plugin_handle, "guac_rdp_proxy_connect");
@@ -466,6 +472,8 @@ void* guacd_native_connection_thread(void* data) {
 
     /* Init client */
     client->__plugin_handle = client_plugin_handle;
+
+    guacd_log(GUAC_LOG_INFO, "Loaded guac_rdp_proxy_connect, running now...");
 
     int ret = alias.proxy_connect(client, connected_socket_fd);
     if (ret) {

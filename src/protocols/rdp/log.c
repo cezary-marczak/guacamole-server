@@ -48,8 +48,33 @@ static BOOL guac_rdp_wlog_text_message(const wLogMessage* message) {
     if (current_client == NULL)
         return FALSE;
 
+    guac_client_log_level gl;
+    switch (message->Level)
+    {
+        case WLOG_TRACE:
+            gl = GUAC_LOG_TRACE;
+            break;
+        case WLOG_DEBUG:
+            gl = GUAC_LOG_DEBUG;
+            break;
+        case WLOG_INFO:
+            gl = GUAC_LOG_INFO;
+            break;
+        case WLOG_WARN:
+            gl = GUAC_LOG_WARNING;
+            break;
+        case WLOG_ERROR:
+            gl = GUAC_LOG_ERROR;
+            break;
+        case WLOG_FATAL:
+            gl = GUAC_LOG_ERROR;
+            break;
+        default:
+            gl = GUAC_LOG_INFO;
+            break;
+    }
     /* Log all received messages at the debug level */
-    guac_client_log(current_client, GUAC_LOG_DEBUG, "%s", message->TextString);
+    guac_client_log(current_client, gl, "\r%s%s", message->PrefixString, message->TextString);
     return TRUE;
 
 }

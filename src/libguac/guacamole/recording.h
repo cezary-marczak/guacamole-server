@@ -61,6 +61,8 @@ typedef struct guac_recording {
      */
     guac_socket* socket;
 
+    char* path;
+
     /**
      * Non-zero if output which is broadcast to each connected client
      * (graphics, streams, etc.) should be included in the session recording,

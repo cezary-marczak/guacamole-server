@@ -337,6 +337,7 @@ void* listen_native_rdp(void* params) {
         /* Accept connection */
         client_addr_len = sizeof(client_addr);
         connected_socket_fd = accept(socket, (struct sockaddr*) &client_addr, &client_addr_len);
+        guacd_log(GUAC_LOG_INFO, "Accepted native connection");
 
         if (connected_socket_fd < 0) {
             guacd_log(GUAC_LOG_ERROR, "Could not accept client connection: %s", strerror(errno));
@@ -476,6 +477,8 @@ int main(int argc, char* argv[]) {
         /* Try next address */
         current_address = current_address->ai_next;
     }
+
+    guacd_log(GUAC_LOG_INFO, "Listening on host %s, port %s", bound_address, bound_port);
 
     /* If unable to bind to anything, fail */
     if (current_address == NULL) {
@@ -640,7 +643,7 @@ int main(int argc, char* argv[]) {
     }
 
     /* Log listening status */
-    guacd_log(GUAC_LOG_INFO, "Listening on host %s, port %s", bound_address, bound_port);
+    guacd_log(GUAC_LOG_INFO, "Listening for native connections on host %s, port %s", bound_address, bound_port);
 
     /* Free addresses */
     freeaddrinfo(addresses);
@@ -659,6 +662,7 @@ int main(int argc, char* argv[]) {
 
     pthread_t native_listen_thread;
     pthread_create(&native_listen_thread, NULL, listen_native_rdp, (void*) ((intptr_t)native_socket_fd));
+    pthread_detach(native_listen_thread);
 
     /* Daemon loop */
     for (;;) {

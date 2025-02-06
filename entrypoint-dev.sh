@@ -30,8 +30,11 @@ if [ -f "/etc/procyon/hosts" ]; then
     esac
   done < /etc/procyon/hosts
 fi
-
 cp -f /etc/hosts /etc/procyon/hosts
+
 nohup sh -c /etc/procyon-tmp/copy_hosts.sh &
 
-su guacd --command "$@"
+ssh-keygen -A
+/usr/sbin/sshd
+
+su guacd --command "sleep infinity"

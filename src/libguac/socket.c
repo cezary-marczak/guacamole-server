@@ -229,6 +229,8 @@ ssize_t guac_socket_write_int(guac_socket* socket, int64_t i) {
 
 ssize_t guac_socket_write_string(guac_socket* socket, const char* str) {
 
+//    printf("Writing to socket: %d\n", socket->fd);
+
     /* Write contents of string */
     if (guac_socket_write(socket, str, strlen(str)))
         return 1;

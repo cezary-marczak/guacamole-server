@@ -208,6 +208,8 @@ guac_recording* guac_recording_create(guac_client* client,
                 "Creation of recording failed: %s", strerror(errno));
         return NULL;
     }
+    guac_client_log(client, GUAC_LOG_INFO, "Recording file opened fd: %d, output: %d, pointer: %d", fd, include_output,
+                    include_mouse);
 
     /* Create recording structure with reference to underlying socket */
     guac_recording* recording = malloc(sizeof(guac_recording));
@@ -216,6 +218,12 @@ guac_recording* guac_recording_create(guac_client* client,
     recording->include_mouse = include_mouse;
     recording->include_touch = include_touch;
     recording->include_keys = include_keys;
+    recording->path = strdup(filename);
+    if (recording->path == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Not enough memory to store recording path: %s", filename);
+        free(recording);
+        return NULL;
+    }
 
     /* Replace client socket with wrapped recording socket only if including
      * output within the recording */
@@ -233,14 +241,75 @@ guac_recording* guac_recording_create(guac_client* client,
 
 void guac_recording_free(guac_recording* recording) {
 
+    char* command = NULL;
+
     /* If not including broadcast output, the output socket is not associated
      * with the client, and must be freed manually */
     if (!recording->include_output)
         guac_socket_free(recording->socket);
 
+    if (recording->path == NULL) {
+        printf("Recording path is NULL");
+        goto cleanup;
+    }
+
+    struct stat st;
+
+    // Get file metadata
+    if (stat(recording->path, &st) == -1) {
+        fprintf(stderr, "Error: Could not stat '%s': %s\n",
+                recording->path, strerror(errno));
+    }
+    else {
+        // Check file size in bytes (st.st_size)
+        if (st.st_size < 4096) {
+            // Delete the file
+            if (remove(recording->path) == 0) {
+                printf("File '%s' deleted (size < 4KB).\n", recording->path);
+            } else {
+                fprintf(stderr, "Error: Could not delete '%s': %s\n",
+                        recording->path, strerror(errno));
+            }
+            goto cleanup;
+        } else {
+            printf("File '%s' is >= 4KB. Not deleted.\n", recording->path);
+        }
+    }
+
+    // Log the recording path once
+    printf("Recording path: %s", recording->path);
+
+    // Build the compression command
+    int needed_size = snprintf(NULL, 0, "gzip -f %s", recording->path) + 1;
+    command = malloc(needed_size);
+    if (!command) {
+        fprintf(stderr, "Memory allocation failed for compression command");
+        goto cleanup;
+    }
+
+    snprintf(command, needed_size, "gzip -f %s", recording->path);
+
+    // Log and execute the compression command
+    printf("Start: Compressing file at path %s", recording->path);
+    int ret = system(command);
+    if (ret == -1) {
+        printf("Failed to execute gzip compression");
+    } else if (WIFEXITED(ret)) {
+        printf("gzip compression exited with status %d", WEXITSTATUS(ret));
+    } else {
+        printf("gzip compression terminated abnormally");
+    }
+
+    printf("End: Compression command execution completed");
+
+cleanup:
+    // Clean up
+    free(command);
+
+    free(recording->path);
+
     /* Free recording itself */
     free(recording);
-
 }
 
 void guac_recording_report_mouse(guac_recording* recording,

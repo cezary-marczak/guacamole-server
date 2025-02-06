@@ -128,7 +128,7 @@ void guac_client_free_stream(guac_client* client, guac_stream* stream) {
 
 }
 
-guac_client* guac_client_alloc() {
+guac_client* guac_client_alloc(int is_native) {
 
     int i;
     pthread_rwlockattr_t lock_attributes;
@@ -177,7 +177,8 @@ guac_client* guac_client_alloc() {
     pthread_rwlock_init(&(client->__users_lock), &lock_attributes);
 
     /* Set up socket to broadcast to all users */
-    client->socket = guac_socket_broadcast(client);
+    if (!is_native)
+        client->socket = guac_socket_broadcast(client);
 
     return client;
 
@@ -215,38 +216,38 @@ void guac_client_free(guac_client* client) {
             guac_client_log(client, GUAC_LOG_ERROR, "Unable to close plugin: %s", dlerror());
     }
 
-    if (client->recording_path != NULL) {
-        // Log the recording path once
-        guac_client_log(client, GUAC_LOG_INFO, "Recording path: %s", client->recording_path);
-
-        // Build the compression command
-        int needed_size = snprintf(NULL, 0, "gzip -f %s", client->recording_path) + 1;
-        char* command = malloc(needed_size);
-        if (!command) {
-            guac_client_log(client, GUAC_LOG_ERROR, "Memory allocation failed for compression command");
-            free(client->recording_path);
-            return;
-        }
-
-        snprintf(command, needed_size, "gzip -f %s", client->recording_path);
-
-        // Log and execute the compression command
-        guac_client_log(client, GUAC_LOG_INFO, "Start: Compressing file at path %s", client->recording_path);
-        int ret = system(command);
-        if (ret == -1) {
-            guac_client_log(client, GUAC_LOG_ERROR, "Failed to execute gzip compression");
-        } else if (WIFEXITED(ret)) {
-            guac_client_log(client, GUAC_LOG_INFO, "gzip compression exited with status %d", WEXITSTATUS(ret));
-        } else {
-            guac_client_log(client, GUAC_LOG_ERROR, "gzip compression terminated abnormally");
-        }
-
-        guac_client_log(client, GUAC_LOG_INFO, "End: Compression command execution completed");
-
-        // Clean up
-        free(command);
-        free(client->recording_path);
-    }
+    // if (client->recording_path != NULL) {
+    //     // Log the recording path once
+    //     guac_client_log(client, GUAC_LOG_INFO, "Recording path: %s", client->recording_path);
+    //
+    //     // Build the compression command
+    //     int needed_size = snprintf(NULL, 0, "gzip -f %s", client->recording_path) + 1;
+    //     char* command = malloc(needed_size);
+    //     if (!command) {
+    //         guac_client_log(client, GUAC_LOG_ERROR, "Memory allocation failed for compression command");
+    //         free(client->recording_path);
+    //         return;
+    //     }
+    //
+    //     snprintf(command, needed_size, "gzip -f %s", client->recording_path);
+    //
+    //     // Log and execute the compression command
+    //     guac_client_log(client, GUAC_LOG_INFO, "Start: Compressing file at path %s", client->recording_path);
+    //     int ret = system(command);
+    //     if (ret == -1) {
+    //         guac_client_log(client, GUAC_LOG_ERROR, "Failed to execute gzip compression");
+    //     } else if (WIFEXITED(ret)) {
+    //         guac_client_log(client, GUAC_LOG_INFO, "gzip compression exited with status %d", WEXITSTATUS(ret));
+    //     } else {
+    //         guac_client_log(client, GUAC_LOG_ERROR, "gzip compression terminated abnormally");
+    //     }
+    //
+    //     guac_client_log(client, GUAC_LOG_INFO, "End: Compression command execution completed");
+    //
+    //     // Clean up
+    //     free(command);
+    //     free(client->recording_path);
+    // }
 
 
     free(client->connection_id);

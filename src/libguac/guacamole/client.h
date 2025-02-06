@@ -45,7 +45,6 @@
 
 struct guac_client {
 
-    char* recording_path;
     /**
      * The guac_socket structure to be used to communicate with all connected
      * web-clients (users). Unlike the user-level guac_socket, this guac_socket
@@ -266,7 +265,7 @@ struct guac_client {
  *
  * @return A pointer to the new client.
  */
-guac_client* guac_client_alloc();
+guac_client* guac_client_alloc(int is_native);
 
 /**
  * Free all resources associated with the given client.

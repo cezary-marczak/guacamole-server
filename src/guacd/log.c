@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <pthread.h>
 
 int guacd_log_level = GUAC_LOG_INFO;
 
@@ -88,9 +89,12 @@ void vguacd_log(guac_client_log_level level, const char* format,
     /* Log to syslog */
     syslog(priority, "%s", message);
 
+    /* On Linux we prefer to see the LWP id */
+    pthread_t tid = pthread_self();
+
     /* Log to STDERR */
-    fprintf(stderr, GUACD_LOG_NAME "[%i]: %s:\t%s\n",
-            getpid(), priority_name, message);
+    fprintf(stderr, GUACD_LOG_NAME "[%i:%lu]: %s:\t%s\n",
+            getpid(), (unsigned long)tid, priority_name, message);
 
 }
 

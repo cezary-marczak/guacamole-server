@@ -712,5 +712,7 @@ int guac_rdp_get_height(freerdp* rdp);
  */
 int guac_rdp_get_depth(freerdp* rdp);
 
+void log_rdp_settings(guac_user* user, const guac_rdp_settings* settings);
+
 #endif
 
