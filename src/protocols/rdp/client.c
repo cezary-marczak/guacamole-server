@@ -27,6 +27,10 @@
 #include "rdp.h"
 #include "settings.h"
 #include "user.h"
+#include "glyph.h"
+#include "pointer.h"
+#include "bitmap.h"
+#include "gdi.h"
 #include <freerdp/server/proxy.h>
 
 #ifdef ENABLE_COMMON_SSH
@@ -259,6 +263,13 @@ int guac_rdp_client_free_handler(guac_client* client) {
 
 int guac_rdp_proxy_connect(guac_client* client, int fd) {
 
+    rdpPointer* pointer = NULL;
+    rdpGlyph* glyph = NULL;
+    rdpBitmap* bitmap = NULL;
+    rdpPrimaryUpdate* primary = NULL;
+    rdpUpdate* additional_update = NULL;
+    proxyServer* proxy_srv = NULL;
+
     /* Automatically set HOME environment variable if unset (FreeRDP's
      * initialization process will fail within freerdp_settings_new() if this
      * is unset) */
@@ -313,11 +324,21 @@ int guac_rdp_proxy_connect(guac_client* client, int fd) {
     }
 
     /* Set client args */
-    client->args = GUAC_RDP_CLIENT_ARGS;
+//    guac_rdp_settings* settings = calloc(1, sizeof(guac_rdp_settings));
 
     /* Alloc client data */
     guac_rdp_client* rdp_client = calloc(1, sizeof(guac_rdp_client));
+//    rdp_client->settings = settings;
     client->data = rdp_client;
+
+    rdp_client->recording = guac_recording_create(client,
+                                                  "/var/lib/procyon/ssl/recordings",
+                                                  "recc",
+                                                  TRUE,
+                                                  FALSE,
+                                                  FALSE,
+                                                  TRUE,
+                                                  FALSE);
 
     /* Init display update module */
     rdp_client->disp = guac_rdp_disp_alloc(client);
@@ -337,38 +358,24 @@ int guac_rdp_proxy_connect(guac_client* client, int fd) {
     /* Set handlers */
     client->free_handler = guac_rdp_client_free_handler;
 
-    guac_rdp_settings* settings = rdp_client->settings;
-    /* Set up screen recording, if requested */
-    if (settings->recording_path != NULL) {
-        rdp_client->recording = guac_recording_create(client,
-                                                      settings->recording_path,
-                                                      settings->recording_name,
-                                                      settings->create_recording_path,
-                                                      !settings->recording_exclude_output,
-                                                      !settings->recording_exclude_mouse,
-                                                      !settings->recording_exclude_touch,
-                                                      settings->recording_include_keys);
-    }
-
     /* Init random number generator */
     srandom(time(NULL));
 
     /* Create display */
     rdp_client->display = guac_common_display_alloc(client,
-                                                    rdp_client->settings->width,
-                                                    rdp_client->settings->height);
+                                                    1600,
+                                                    900);
 
     /* Use lossless compression only if requested (otherwise, use default
      * heuristics) */
-    guac_common_display_set_lossless(rdp_client->display, settings->lossless);
+//    guac_common_display_set_lossless(rdp_client->display, settings->lossless);
 
     rdp_client->current_surface = rdp_client->display->default_surface;
 
     rdp_client->available_svc = guac_common_list_alloc();
 
     /* Load keymap into client */
-    rdp_client->keyboard = guac_rdp_keyboard_alloc(client,
-                                                   settings->server_layout);
+    rdp_client->keyboard = guac_rdp_keyboard_alloc(client, guac_rdp_keymap_find("en-us-qwerty"));
 
     /* Set default pointer */
     guac_common_cursor_set_pointer(rdp_client->display->cursor);
@@ -376,30 +383,67 @@ int guac_rdp_proxy_connect(guac_client* client, int fd) {
     /* Signal that reconnect has been completed */
     guac_rdp_disp_reconnect_complete(rdp_client->disp);
 
-    proxyConfig* cfg = pf_server_config_load("/src/config.ini");
+    int ret = -1;
+    proxyConfig* cfg = pf_server_config_load("/opt/guacamole/config.ini");
     if (!cfg) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Proxy config load failed from /src/config.ini");
-        close(fd);
-        return -1;
+        guac_client_log(client, GUAC_LOG_ERROR, "Proxy config load failed from /opt/guacamole/config.ini");
+        goto cleanup;
     }
 
-    proxyServer* proxy_srv = pf_server_new(cfg);
+    additional_update = (rdpUpdate*)calloc(1, sizeof(rdpUpdate));
+    additional_update->primary = (rdpPrimaryUpdate*)calloc(1, sizeof(rdpPrimaryUpdate));
+    additional_update->DesktopResize = guac_rdp_gdi_desktop_resize;
+    additional_update->EndPaint = guac_rdp_gdi_end_paint;
+    additional_update->SetBounds = guac_rdp_gdi_set_bounds;
+
+    primary = additional_update->primary;
+    primary->DstBlt = guac_rdp_gdi_dstblt;
+    primary->PatBlt = guac_rdp_gdi_patblt;
+    primary->ScrBlt = guac_rdp_gdi_scrblt;
+    primary->MemBlt = guac_rdp_gdi_memblt;
+    primary->OpaqueRect = guac_rdp_gdi_opaquerect;
+
+    bitmap = calloc(1, sizeof(rdpBitmap));
+    bitmap->New = guac_rdp_bitmap_new;
+    bitmap->Free = guac_rdp_bitmap_free;
+    bitmap->Paint = guac_rdp_bitmap_paint;
+    bitmap->SetSurface = guac_rdp_bitmap_setsurface;
+
+    /* Set up glyph handling */
+    glyph = calloc(1, sizeof(rdpGlyph));
+    glyph->New = guac_rdp_glyph_new;
+    glyph->Free = guac_rdp_glyph_free;
+    glyph->Draw = guac_rdp_glyph_draw;
+    glyph->BeginDraw = guac_rdp_glyph_begindraw;
+    glyph->EndDraw = guac_rdp_glyph_enddraw;
+
+    /* Set up pointer handling */
+    pointer = calloc(1, sizeof(rdpPointer));
+    pointer->New = guac_rdp_pointer_new;
+    pointer->Free = guac_rdp_pointer_free;
+    pointer->Set = guac_rdp_pointer_set;
+    pointer->SetNull = guac_rdp_pointer_set_null;
+    pointer->SetDefault = guac_rdp_pointer_set_default;
+
+    proxy_srv = pf_server_new(cfg);
     if (!proxy_srv) {
         guac_client_log(client, GUAC_LOG_ERROR, "pf_server_new failed");
-        close(fd);
-        return -1;
+        goto cleanup;
     }
 
-//    proxy_srv->guacamole_client = params->client;
-//    proxy_srv->pre_connect = rdp_freerdp_pre_connect;
+    proxy_srv->guacamole_client = client;
+    proxy_srv->pointer = pointer;
+    proxy_srv->glyph = glyph;
+    proxy_srv->bitmap = bitmap;
+    proxy_srv->additional_update = additional_update;
 
-    int ret = pf_server_start_with_peer_socket(proxy_srv, fd);
+    ret = pf_server_start_with_peer_socket(proxy_srv, fd);
     if (!ret) {
         guac_client_log(client, GUAC_LOG_ERROR, "pf_server_start_with_peer_socket failed");
-        close(fd);
-        return -1;
+        goto cleanup;
     }
 
+cleanup:
     /* Clean up print job, if active */
     if (rdp_client->active_job != NULL) {
         guac_rdp_print_job_kill(rdp_client->active_job);
@@ -418,9 +462,16 @@ int guac_rdp_proxy_connect(guac_client* client, int fd) {
     guac_common_display_free(rdp_client->display);
     rdp_client->display = NULL;
 
-    pf_server_free(proxy_srv);
+    close(fd);
     guac_client_free(client);
+    if (additional_update) {
+        free(additional_update->primary);
+        free(additional_update);
+    }
+    free(pointer);
+    free(glyph);
+    free(bitmap);
+    pf_server_free(proxy_srv);
 
-    return 0;
-
+    return ret;
 }

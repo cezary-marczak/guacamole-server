@@ -477,6 +477,8 @@ int main(int argc, char* argv[]) {
         current_address = current_address->ai_next;
     }
 
+    guacd_log(GUAC_LOG_INFO, "Listening on host %s, port %s", bound_address, bound_port);
+
     /* If unable to bind to anything, fail */
     if (current_address == NULL) {
         guacd_log(GUAC_LOG_ERROR, "Unable to bind socket to any addresses.");
@@ -640,7 +642,7 @@ int main(int argc, char* argv[]) {
     }
 
     /* Log listening status */
-    guacd_log(GUAC_LOG_INFO, "Listening on host %s, port %s", bound_address, bound_port);
+    guacd_log(GUAC_LOG_INFO, "Listening for native connections on host %s, port %s", bound_address, bound_port);
 
     /* Free addresses */
     freeaddrinfo(addresses);

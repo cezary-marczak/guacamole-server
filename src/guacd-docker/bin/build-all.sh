@@ -40,6 +40,6 @@ export LDFLAGS="$LDFLAGS -Wl,-z,stack-size=8388608"
 #
 
 cd "$BUILD_DIR"
-autoreconf -fi && ./configure --prefix="$PREFIX_DIR" $GUACAMOLE_SERVER_OPTS
+autoreconf -fi --verbose && ./configure --prefix="$PREFIX_DIR" $GUACAMOLE_SERVER_OPTS
 make && make install
 

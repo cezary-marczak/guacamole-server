@@ -923,7 +923,7 @@ static void guacd_exec_proc(guacd_proc* proc, const char* protocol) {
         /* Log error */
         if (guac_error == GUAC_STATUS_NOT_FOUND)
             guacd_log(GUAC_LOG_WARNING,
-                    "Support for protocol \"%s\" is not installed", protocol);
+                    "Support for protocol \"%s\" is not installed: %s", protocol, guac_error_message);
         else
             guacd_log_guac_error(GUAC_LOG_ERROR,
                     "Unable to load client plugin");
