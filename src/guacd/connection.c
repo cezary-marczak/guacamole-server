@@ -394,7 +394,6 @@ void* guacd_connection_thread(void* data) {
     socket = guac_socket_open(connected_socket_fd);
 #endif
 
-
     /* Route connection according to Guacamole, creating a new process if needed */
     if (guacd_route_connection(map, socket))
         guac_socket_free(socket);
