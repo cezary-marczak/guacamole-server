@@ -1346,7 +1346,7 @@ complete:
 
 void guac_common_surface_draw(guac_common_surface* surface, int x, int y, cairo_surface_t* src) {
 
-    guac_client_log(surface->client, GUAC_LOG_INFO, "Drawing surface at %i, %i", x, y);
+    guac_client_log(surface->client, GUAC_LOG_DEBUG, "Drawing surface at %i, %i", x, y);
     pthread_mutex_lock(&surface->_lock);
 
     unsigned char* buffer = cairo_image_surface_get_data(src);
@@ -1648,7 +1648,7 @@ void guac_common_surface_reset_clip(guac_common_surface* surface) {
 static void __guac_common_surface_flush_to_png(guac_common_surface* surface,
         int opaque) {
 
-    guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush to png.");
+    // guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush to png.");
 
     if (surface->dirty) {
 
@@ -1739,7 +1739,7 @@ static int guac_common_surface_suggest_quality(guac_client* client) {
  */
 static void __guac_common_surface_flush_to_jpeg(guac_common_surface* surface) {
 
-    guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush to jpeg.");
+    // guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush to jpeg.");
 
     if (surface->dirty) {
 
@@ -1793,7 +1793,7 @@ static void __guac_common_surface_flush_to_jpeg(guac_common_surface* surface) {
 static void __guac_common_surface_flush_to_webp(guac_common_surface* surface,
         int opaque) {
 
-    guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush to webp.");
+    // guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush to webp.");
 
     if (surface->dirty) {
 
@@ -1900,7 +1900,7 @@ static void __guac_common_surface_flush_properties(
 
 static void __guac_common_surface_flush(guac_common_surface* surface) {
 
-    guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush.");
+    // guac_client_log(surface->client, GUAC_LOG_INFO, "Surface flush.");
 
     /* Flush final dirty rectangle to queue. */
     __guac_common_surface_flush_to_queue(surface);

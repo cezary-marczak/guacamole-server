@@ -256,6 +256,378 @@ int guac_rdp_client_free_handler(guac_client *client) {
 
 }
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <errno.h>
+
+static void string_hexdump(const BYTE* data, size_t length)
+{
+    const BYTE* p = data;
+    size_t i, line, offset = 0;
+
+    while (offset < length)
+    {
+        printf("%04" PRIxz " ", offset);
+
+        line = length - offset;
+
+        if (line > 16)
+            line = 16;
+
+        for (i = 0; i < line; i++)
+            printf("%02" PRIx8 " ", p[i]);
+
+        for (; i < 16; i++)
+            printf("   ");
+
+        for (i = 0; i < line; i++)
+            printf("%c", (p[i] >= 0x20 && p[i] < 0x7F) ? (char)p[i] : '.');
+
+        printf("\n");
+
+        offset += line;
+        p += line;
+    }
+}
+
+static const char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+static char* crypto_base64_encode(const BYTE* data, int in_length, size_t* out_length, BOOL with_padding)
+{
+    int c;
+    const BYTE* q;
+    char* p;
+    char* ret;
+    int i = 0;
+    int blocks;
+
+    q = data;
+    p = ret = (char*)malloc((in_length + 2) / 3 * 4 + 1);
+    if (!p)
+        return NULL;
+
+    /* b1, b2, b3 are input bytes
+     *
+     * 0         1         2
+     * 012345678901234567890123
+     * |  b1  |  b2   |  b3   |
+     *
+     * [ c1 ]     [  c3 ]
+     *      [  c2 ]     [  c4 ]
+     *
+     * c1, c2, c3, c4 are output chars in base64
+     */
+
+    /* first treat complete blocks */
+    blocks = in_length - (in_length % 3);
+    for (i = 0; i < blocks; i += 3, q += 3)
+    {
+        c = (q[0] << 16) + (q[1] << 8) + q[2];
+
+        *p++ = base64[(c & 0x00FC0000) >> 18];
+        *p++ = base64[(c & 0x0003F000) >> 12];
+        *p++ = base64[(c & 0x00000FC0) >> 6];
+        *p++ = base64[c & 0x0000003F];
+    }
+
+    /* then remainder */
+    switch (in_length % 3)
+    {
+        case 0:
+            break;
+        case 1:
+            c = (q[0] << 16);
+            *p++ = base64[(c & 0x00FC0000) >> 18];
+            *p++ = base64[(c & 0x0003F000) >> 12];
+            if (with_padding) {
+                *p++ = '=';
+                *p++ = '=';
+            }
+        break;
+        case 2:
+            c = (q[0] << 16) + (q[1] << 8);
+            *p++ = base64[(c & 0x00FC0000) >> 18];
+            *p++ = base64[(c & 0x0003F000) >> 12];
+            *p++ = base64[(c & 0x00000FC0) >> 6];
+            if (with_padding) {
+                *p++ = '=';
+            }
+        break;
+    }
+
+    *p = 0;
+    *out_length = (size_t)(p - ret);
+
+    return ret;
+}
+
+BOOL array_cmp_str(const void* objA, const void* objB) {
+    return strcmp(objA, objB) == 0;
+}
+
+long read_n_bytes(int sockfd, void* buffer, size_t n)
+{
+    ssize_t bytes_read = 0;
+    char* buf_ptr = buffer;
+
+    while (bytes_read < n) {
+        ssize_t ret = recv(sockfd, buf_ptr + bytes_read, n - bytes_read, 0);
+
+        // Check for errors or connection closure
+        if (ret == 0) {
+            // The peer closed the connection (EOF)
+            return 0;
+        } else if (ret < 0) {
+            // If interrupted by a signal, just retry
+            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+                continue;
+            // Otherwise, it's a real error
+            return -1;
+        }
+
+        bytes_read += ret;
+    }
+
+    // On success, we have read exactly n bytes
+    return bytes_read;
+}
+
+static char* read_null_terminated_str(guac_client* client, wStream* s) {
+    BYTE* str = NULL;
+    size_t len;
+    size_t remain = Stream_GetRemainingLength(s);
+    str = Stream_Pointer(s);
+
+    if ((len = strnlen((char*)str, remain)) == remain)
+    {
+        guac_client_log(client, GUAC_LOG_ERROR, "Invalid init packet, no NULL byte found");
+        return NULL;
+    }
+    char* ret = strndup((char*)str, len);
+
+    Stream_Seek(s, len+1);
+    return ret;
+}
+
+static int read_guac_init(guac_client* client, int sockfd, proxyServer* proxy_srv)
+{
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags < 0) {
+        perror("fcntl(F_GETFL) failed");
+        return -1;
+    }
+
+    guac_client_log(client, GUAC_LOG_INFO, "Socket flags: 0x%08x", flags);
+
+    int new_flags = flags;
+
+    // Clear the O_NONBLOCK bit to make the socket blocking
+    new_flags &= ~O_NONBLOCK;
+    if (fcntl(sockfd, F_SETFL, new_flags) < 0) {
+        perror("fcntl(F_SETFL) failed");
+        return -1;
+    }
+
+    guac_client_log(client, GUAC_LOG_INFO, "Set new flags", new_flags);
+
+    BYTE b[4096];
+    int read = 0;
+    int n = read_n_bytes(sockfd, b, 2);
+    if (n <= 0)
+        return n;
+    if (n != 2)
+        return -1;
+
+    uint16_t totalLen = (((uint16_t)(*b)) << 8) + (uint16_t)(*(b + 1));
+    read += sizeof(uint16_t);
+
+    guac_client_log(client, GUAC_LOG_INFO, "Init pkt size: %d, reading another %d", totalLen, totalLen-2);
+
+    n = read_n_bytes(sockfd, b + read, totalLen - 2);
+    if (n <= 0)
+        return n;
+    if (n != totalLen - 2)
+        return -1;
+
+    guac_client_log(client, GUAC_LOG_INFO, "SUCCESS!!!");
+    string_hexdump(b, totalLen);
+
+    if (fcntl(sockfd, F_SETFL, flags) < 0) {
+        perror("fcntl(F_SETFL) failed");
+        return -1;
+    }
+
+    wStream* s = Stream_New(b+2, totalLen-2);
+
+    int ret = -1;
+
+    char* conn_name = NULL, *recording_path = NULL, *recording_name = NULL;
+    wArrayList* allowed_principals = ArrayList_New(FALSE);
+    allowed_principals->object.fnObjectEquals = array_cmp_str;
+
+    conn_name = read_null_terminated_str(client, s);
+    if (conn_name == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read a string from init packet");
+        goto cleanup;
+    }
+    if (Stream_GetRemainingLength(s) == 0) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Only one string in a init packet");
+        goto cleanup;
+    }
+
+    recording_path = read_null_terminated_str(client, s);
+    if (recording_path == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read a string from init packet");
+        goto cleanup;
+    }
+    if (Stream_GetRemainingLength(s) == 0) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Only two string in a init packet");
+        goto cleanup;
+    }
+
+    recording_name = read_null_terminated_str(client, s);
+    if (recording_name  == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read a string from init packet");
+        goto cleanup;
+    }
+    if (Stream_GetRemainingLength(s) == 0) {
+        ret = 1;
+        guac_client_log(client, GUAC_LOG_WARNING, "No allowed principals in init packet");
+        goto cleanup;
+    }
+
+    while (TRUE) {
+        char* principal = read_null_terminated_str(client, s);
+        if (principal == NULL) {
+            guac_client_log(client, GUAC_LOG_ERROR, "Failed to read a string from init packet");
+            goto cleanup;
+        }
+        ArrayList_Add(allowed_principals, principal);
+
+        if (Stream_GetRemainingLength(s) == 0) {
+            ret = 1;
+            break;
+        }
+    }
+    guac_rdp_client* rdp_client = client->data;
+    if (rdp_client == NULL) {
+        ret = -1;
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to get client RDP data");
+        goto cleanup;
+    }
+    proxy_srv->allowed_principals = allowed_principals;
+    proxy_srv->conn_name = conn_name;
+    rdp_client->settings->recording_path = recording_path;
+    rdp_client->settings->recording_name = recording_name;
+
+cleanup:
+    Stream_Free(s, FALSE);
+    if (ret <= 0) {
+        free(conn_name);
+        free(recording_path);
+        free(recording_name);
+        // Print out the strings
+        size_t count = ArrayList_Count(allowed_principals);
+        for (size_t i = 0; i < count; i++)
+        {
+            char* str = ArrayList_GetItem(allowed_principals, i);
+            free(str);
+        }
+    }
+    return ret;
+}
+
+BOOL start_recording(const proxyServer* proxy_srv, const char* principal) {
+    char* conn_name_base64 = NULL;
+
+    if (proxy_srv == NULL ||
+        proxy_srv->guacamole_client == NULL ||
+        proxy_srv->conn_name == NULL ||
+        principal == NULL) {
+
+        fprintf(stderr, "One or more arguments are null: client: %p, conn_name: %p, principal: %p\n",
+            proxy_srv->guacamole_client, proxy_srv->conn_name, principal);
+        return FALSE;
+    }
+
+    guac_client* client = proxy_srv->guacamole_client;
+    guac_rdp_client* rdp_client = client->data;
+    if (rdp_client == NULL ||
+        rdp_client->settings->recording_path == NULL ||
+        rdp_client->settings->recording_name == NULL) {
+
+        guac_client_log(client, GUAC_LOG_ERROR,
+            "One or more arguments are null: rdp_client: %p, recording_path: %p, recording_name: %p",
+            rdp_client, rdp_client->settings->recording_path, rdp_client->settings->recording_name);
+        return FALSE;
+    }
+
+    const char* principal_var = "<principal>";
+    const char* found = strstr(proxy_srv->conn_name, principal_var);
+    if (!found) {
+        guac_client_log(client, GUAC_LOG_ERROR,
+            "Principal var ('%s') missing in conn_name: %s",
+            principal_var, proxy_srv->conn_name);
+        return FALSE;
+    }
+    const size_t principal_len = strlen(principal);
+    const size_t conn_name_keep = found - proxy_srv->conn_name;
+    const size_t conn_name_len = conn_name_keep + principal_len;
+    if (conn_name_len >= PATH_MAX) {
+        guac_client_log(client, GUAC_LOG_ERROR,
+        "Connection name too long (len: %zu, max: %d): '%s' + '%s'",
+            conn_name_len, PATH_MAX, proxy_srv->conn_name, principal);
+        return FALSE;
+    }
+
+    BYTE conn_name_base64_in[PATH_MAX];
+    char* to = (char*)conn_name_base64_in;
+    to = strncpy(to, proxy_srv->conn_name, conn_name_keep);
+    to = stpcpy(to, principal);
+
+    size_t conn_name_base64_len;
+    conn_name_base64 = crypto_base64_encode(conn_name_base64_in, conn_name_len, &conn_name_base64_len,
+        FALSE);
+    if (conn_name_base64 == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to base64 encode connection name (len %zu): %s",
+            conn_name_len, conn_name_base64_in);
+        return FALSE;
+    }
+
+    const char* conn_name_var = "<connection>";
+    found = strstr(rdp_client->settings->recording_path, conn_name_var);
+    if (!found) {
+        free(conn_name_base64);
+        return FALSE;
+    }
+    const size_t recording_path_keep = found - proxy_srv->conn_name;
+    const size_t recording_path_len = recording_path_keep + conn_name_base64_len;
+
+    char* recording_path = malloc(recording_path_len + 1);
+    to = recording_path;
+
+    to = stpncpy(to, rdp_client->settings->recording_path, recording_path_keep);
+    to = stpcpy(to, conn_name_base64);
+
+    free(conn_name_base64);
+    free(rdp_client->settings->recording_path);
+    rdp_client->settings->recording_path = recording_path;
+
+    rdp_client->recording = guac_recording_create(client,
+                                              rdp_client->settings->recording_path,
+                                              rdp_client->settings->recording_name,
+                                              TRUE,
+                                              TRUE,
+                                              TRUE,
+                                              FALSE,
+                                              FALSE);
+    guac_client_log(client, GUAC_LOG_INFO, "Recording created");
+
+    SetEvent(proxy_srv->start_recording_event);
+
+    return TRUE;
+}
+
 int guac_rdp_proxy_connect(guac_client *client, int fd) {
 
     rdpPointer *pointer = NULL;
@@ -320,23 +692,9 @@ int guac_rdp_proxy_connect(guac_client *client, int fd) {
                             current_home, strerror(errno));
     }
 
-    /* Set client args */
-//    guac_rdp_settings* settings = calloc(1, sizeof(guac_rdp_settings));
-
     /* Alloc client data */
     guac_rdp_client *rdp_client = calloc(1, sizeof(guac_rdp_client));
-//    rdp_client->settings = settings;
     client->data = rdp_client;
-
-    rdp_client->recording = guac_recording_create(client,
-                                                  "/var/lib/procyon/ssl/recordings",
-                                                  "recc",
-                                                  TRUE,
-                                                  TRUE,
-                                                  TRUE,
-                                                  FALSE,
-                                                  FALSE);
-    guac_client_log(client, GUAC_LOG_INFO, "Recording created");
 
     /* Init display update module */
     rdp_client->disp = guac_rdp_disp_alloc(client);
@@ -432,6 +790,16 @@ int guac_rdp_proxy_connect(guac_client *client, int fd) {
     }
     guac_client_log(client, GUAC_LOG_INFO, "Proxy created");
 
+    int received = read_guac_init(client, fd, proxy_srv);
+    if (received == 0) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, connection closed");
+        goto cleanup;
+    }
+    if (received < 0) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, ERRORED");
+        goto cleanup;
+    }
+
     proxy_srv->guacamole_client = client;
     proxy_srv->pointer = pointer;
     proxy_srv->glyph = glyph;
@@ -445,15 +813,31 @@ int guac_rdp_proxy_connect(guac_client *client, int fd) {
         guac_client_log(client, GUAC_LOG_ERROR, "pf_server_start_with_peer_socket failed");
         goto cleanup;
     }
+    HANDLE evs[] = {proxy_srv->start_recording_event, proxy_srv->thread};
+    DWORD wait_ret = WaitForMultipleObjects(2, evs, FALSE, 10000);
+    if (wait_ret == WAIT_TIMEOUT) {
+        guac_client_log(client, GUAC_LOG_ERROR, "WaitForMultipleObjects failed for server start event");
+        pf_server_stop(proxy_srv);
+        goto cleanup;
+    }
+    if (wait_ret == WAIT_OBJECT_0) {
+        guac_client_log(client, GUAC_LOG_INFO, "Proxy server started");
+    } else if (wait_ret == WAIT_OBJECT_0 + 1) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Proxy server start event signaled");
+        goto cleanup;
+    } else {
+        guac_client_log(client, GUAC_LOG_ERROR, "WaitForMultipleObjects failed for server start event");
+        goto cleanup;
+    }
 
     while (1) {
-        DWORD wait_ret = WaitForSingleObject(proxy_srv->thread, GUAC_RDP_FRAME_DURATION);
+        wait_ret = WaitForSingleObject(proxy_srv->thread, GUAC_RDP_FRAME_DURATION);
         if (wait_ret == WAIT_OBJECT_0) {
             ret = 0;
             guac_client_log(client, GUAC_LOG_INFO, "Proxy thread stop event");
             break;
         }
-        else if (wait_ret == WAIT_TIMEOUT) {
+        if (wait_ret == WAIT_TIMEOUT) {
             guac_common_display_flush(rdp_client->display);
             guac_client_end_frame(client);
             guac_socket_flush(client->socket);
@@ -494,7 +878,16 @@ cleanup:
     free(pointer);
     free(glyph);
     free(bitmap);
-    pf_server_free(proxy_srv);
+    if (proxy_srv) {
+        if (proxy_srv->allowed_principals) {
+            for (int i = 0; i < ArrayList_Count(proxy_srv->allowed_principals); i++) {
+                free(ArrayList_GetItem(proxy_srv->allowed_principals, i));
+            }
+            free(proxy_srv->allowed_principals);
+        }
+        free((void*)proxy_srv->conn_name);
+        pf_server_free(proxy_srv);
+    }
 
     return ret;
 }

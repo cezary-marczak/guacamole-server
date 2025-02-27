@@ -220,7 +220,6 @@ ARG FREERDP_OPTS="\
     -DWITH_XV=OFF \
     -DWITH_ZLIB=ON \
     -DWITH_KRB5=ON \
-    -DWLOG_LEVEL=1 \
     -DKRB5_TRACE=/dev/stdout \
     -DDEBUG_NLA=ON \
     -DGSS_ROOT_FLAVOUR=MIT"
@@ -286,7 +285,8 @@ ARG PREFIX_DIR=/opt/guacamole
 ENV LC_ALL=C.UTF-8
 ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
 ENV PKG_CONFIG_PATH=${PREFIX_DIR}/lib/pkgconfig
-ENV GUACD_LOG_LEVEL=info
+ENV GUACD_LOG_LEVEL=trace
+ENV WLOG_LEVEL=TRACE
 
 # Install dependencies
 RUN apk add --no-cache \
@@ -381,8 +381,8 @@ RUN xargs apk add --no-cache < ${PREFIX_DIR}/DEPENDENCIES
 WORKDIR ${PREFIX_DIR}
 
 # Generate SSL certificates
-RUN openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048 && \
-    openssl req -new -x509 -key private_key.pem -out certificate.pem -days 365 -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
+RUN openssl genpkey -algorithm RSA -out server.key -pkeyopt rsa_keygen_bits:2048 && \
+    openssl req -new -x509 -key server.key -out server.crt -days 365 -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
 
 # Add configuration file with SSL settings
 RUN printf '[Server]\n\
@@ -453,3 +453,4 @@ EXPOSE 3389
 # PREFIX_DIR build argument.
 #
 ENTRYPOINT [ "/etc/procyon-tmp/entrypoint.sh" ]
+#CMD KRB5_TRACE=/home/guacd/kerb /opt/guacamole/sbin/guacd -b 0.0.0.0 -L $GUACD_LOG_LEVEL -f

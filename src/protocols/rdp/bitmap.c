@@ -128,7 +128,7 @@ BOOL guac_rdp_bitmap_paint(rdpContext* context, rdpBitmap* bitmap) {
 void guac_rdp_bitmap_free(rdpContext* context, rdpBitmap* bitmap) {
 
     guac_client* client = ((rdp_freerdp_context*) context)->client;
-    guac_client_log(client, GUAC_LOG_INFO, "Freeing bitmap.");
+    // guac_client_log(client, GUAC_LOG_INFO, "Freeing bitmap.");
     guac_rdp_client* rdp_client = (guac_rdp_client*) client->data;
     guac_common_display_layer* buffer = ((guac_rdp_bitmap*) bitmap)->layer;
 
