@@ -31,6 +31,7 @@
 #include <guacamole/plugin.h>
 #include <guacamole/protocol.h>
 #include <guacamole/socket.h>
+#include <guacamole/string.h>
 #include <guacamole/user.h>
 
 #ifdef ENABLE_SSL
@@ -44,6 +45,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <dlfcn.h>
 
 /**
  * Behaves exactly as write(), but writes as much as possible, returning
@@ -401,3 +403,28 @@ void* guacd_connection_thread(void* data) {
 
 }
 
+void* guacd_native_connection_thread(void* data) {
+
+    guacd_log(GUAC_LOG_INFO, "Started native conn thread");
+    guacd_connection_thread_params* params = (guacd_connection_thread_params*) data;
+
+    int connected_socket_fd = params->connected_socket_fd;
+    free(params);
+
+    /* Associate new client */
+    guac_client* client = guac_client_alloc(1);
+    if (client == NULL) {
+        guacd_log(GUAC_LOG_ERROR, "Failed to alloc guac_client");
+        close(connected_socket_fd);
+        return NULL;
+    }
+    guacd_log(GUAC_LOG_INFO, "Created guac_client for native");
+
+    /* Init logging */
+    client->log_handler = guacd_client_log;
+    client->log_level = guacd_get_log_level();
+
+    guacd_create_proc_native(client, connected_socket_fd);
+
+    return NULL;
+}

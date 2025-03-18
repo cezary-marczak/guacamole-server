@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -319,7 +320,7 @@ static void guacd_exec_proc(guacd_proc* proc, const char* protocol) {
         /* Log error */
         if (guac_error == GUAC_STATUS_NOT_FOUND)
             guacd_log(GUAC_LOG_WARNING,
-                    "Support for protocol \"%s\" is not installed", protocol);
+                    "Support for protocol \"%s\" is not installed: %s", protocol, guac_error_message);
         else
             guacd_log_guac_error(GUAC_LOG_ERROR,
                     "Unable to load client plugin");
@@ -410,7 +411,7 @@ guacd_proc* guacd_create_proc(const char* protocol) {
     }
 
     /* Associate new client */
-    proc->client = guac_client_alloc();
+    proc->client = guac_client_alloc(0);
     if (proc->client == NULL) {
         guacd_log_guac_error(GUAC_LOG_ERROR, "Unable to create client");
         close(parent_socket);
@@ -455,7 +456,119 @@ guacd_proc* guacd_create_proc(const char* protocol) {
     }
 
     return proc;
+}
 
+void guacd_exec_proc_native(guacd_proc* proc, int client_fd)
+{
+    /* Set process group ID to match PID */
+    if (setpgid(0, 0)) {
+        guacd_log(GUAC_LOG_ERROR, "Cannot set PGID for connection process: %s",
+                strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    /* Reference to dlopen()'d plugin */
+    void* client_plugin_handle;
+
+    /* Pluggable client */
+    const char* protocol_lib = GUAC_PROTOCOL_LIBRARY_PREFIX "rdp" GUAC_PROTOCOL_LIBRARY_SUFFIX;
+
+    /* Type-pun for the sake of dlsym() - cannot typecast a void* to a function
+     * pointer otherwise */
+    union {
+        guac_rdp_proxy_connect_handler* proxy_connect;
+        void* obj;
+    } alias;
+
+    guacd_log(GUAC_LOG_INFO, "Loading client plugin: %s", protocol_lib);
+
+    /* Load client plugin */
+    client_plugin_handle = dlopen(protocol_lib, RTLD_LAZY);
+    if (!client_plugin_handle) {
+        guac_error = GUAC_STATUS_NOT_FOUND;
+        guac_error_message = dlerror();
+        guacd_log(GUAC_LOG_ERROR, "Unable to load client plugin \"%s\": %d, %s",
+                protocol_lib, guac_error, guac_error_message);
+        sleep(2);
+        exit(EXIT_FAILURE);
+    }
+
+    dlerror(); /* Clear errors */
+
+    guacd_log(GUAC_LOG_INFO, "Loading guac_rdp_proxy_connect");
+
+    /* Get init function */
+    alias.obj = dlsym(client_plugin_handle, "guac_rdp_proxy_connect");
+
+    /* Fail if cannot find guac_rdp_proxy_connect */
+    if (dlerror() != NULL) {
+        guac_error = GUAC_STATUS_INTERNAL_ERROR;
+        guac_error_message = dlerror();
+        dlclose(client_plugin_handle);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Init client */
+    proc->client->__plugin_handle = client_plugin_handle;
+
+    guacd_log(GUAC_LOG_INFO, "Loaded guac_rdp_proxy_connect, running now...");
+
+    int ret = alias.proxy_connect(proc->client, client_fd);
+    if (ret) {
+        guacd_log(GUAC_LOG_ERROR, "guac_rdp_proxy_connect failed");
+    }
+
+    exit(ret);
+}
+
+void guacd_create_proc_native(guac_client* client, int client_fd) {
+
+    /* Allocate process */
+    guacd_proc* proc = calloc(1, sizeof(guacd_proc));
+    if (proc == NULL) {
+        return;
+    }
+    proc->fd_socket = -1;
+    proc->client = client;
+
+    /* Fork */
+    proc->pid = fork();
+    if (proc->pid < 0) {
+        guacd_log(GUAC_LOG_ERROR, "Cannot fork child process: %s", strerror(errno));
+        guac_client_free(proc->client);
+        free(proc);
+        return;
+    }
+    /* Child */
+    if (proc->pid == 0) {
+        guacd_exec_proc_native(proc, client_fd);
+    }
+
+    /* Parent, waiting for the child process */
+    int status;
+    const int wpid = waitpid(proc->pid, &status, 0);
+    if (wpid == -1) {
+        guacd_log(GUAC_LOG_INFO, "child process finished: %d", proc->pid);
+        goto proc_cleanup;
+    }
+
+    if (WIFEXITED(status)) {
+        guacd_log(GUAC_LOG_ERROR, "child exited, status=%d", WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
+        guacd_log(GUAC_LOG_ERROR, "child killed (signal %d)", WTERMSIG(status));
+#ifdef WCOREDUMP
+        if (WCOREDUMP(status))
+            guacd_log(GUAC_LOG_ERROR, "child dumped core");
+#endif
+    } else if (WIFSTOPPED(status)) {
+        guacd_log(GUAC_LOG_ERROR, "child stopped (signal %d)", WSTOPSIG(status));
+    } else {    /* Non-standard case -- may never happen */
+        guacd_log(GUAC_LOG_ERROR, "Unexpected status (0x%x)", status);
+    }
+
+proc_cleanup:
+    guacd_proc_stop(proc);
+    free(proc);
 }
 
 void guacd_proc_stop(guacd_proc* proc) {
@@ -463,14 +576,17 @@ void guacd_proc_stop(guacd_proc* proc) {
     /* Signal client to stop */
     guac_client_stop(proc->client);
 
-    /* Shutdown socket - in-progress recvmsg() will not fail otherwise */
-    if (shutdown(proc->fd_socket, SHUT_RDWR) == -1)
-        guacd_log(GUAC_LOG_ERROR, "Unable to shutdown internal socket for "
-                "connection %s. Corresponding process may remain running but "
-                "inactive.", proc->client->connection_id);
+    if (proc->fd_socket != -1)
+    {
+        /* Shutdown socket - in-progress recvmsg() will not fail otherwise */
+        if (shutdown(proc->fd_socket, SHUT_RDWR) == -1)
+            guacd_log(GUAC_LOG_ERROR, "Unable to shutdown internal socket for "
+                    "connection %s. Corresponding process may remain running but "
+                    "inactive.", proc->client->connection_id);
 
-    /* Clean up our end of the socket */
-    close(proc->fd_socket);
+        /* Clean up our end of the socket */
+        close(proc->fd_socket);
+    }
 
 }
 

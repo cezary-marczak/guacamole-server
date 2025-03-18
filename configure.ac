@@ -661,13 +661,13 @@ OLDCPPFLAGS="$CPPFLAGS"
 if test "x$with_rdp" != "xno"
 then
     have_freerdp2=yes
-    PKG_CHECK_MODULES([RDP], [freerdp2 freerdp-client2 winpr2],
+    PKG_CHECK_MODULES([RDP], [freerdp2 freerdp-client2 freerdp-proxy2 winpr2],
                       [CPPFLAGS="${RDP_CFLAGS} -Werror $CPPFLAGS"]
                       [AS_IF([test "x${FREERDP2_PLUGIN_DIR}" = "x"],
                              [FREERDP2_PLUGIN_DIR="`$PKG_CONFIG --variable=libdir freerdp2`/freerdp2"])],
                       [AC_MSG_WARN([
   --------------------------------------------
-   Unable to find FreeRDP (libfreerdp2 / libfreerdp-client2 / libwinpr2)
+   Unable to find FreeRDP (libfreerdp2 / libfreerdp-client2 / libfreerdp-proxy2 / libwinpr2)
    RDP will be disabled.
   --------------------------------------------])
                        have_freerdp2=no])

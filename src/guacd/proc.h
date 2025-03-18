@@ -95,6 +95,7 @@ typedef struct guacd_proc {
  *     the process could not be created.
  */
 guacd_proc* guacd_create_proc(const char* protocol);
+void guacd_create_proc_native(guac_client* proc, int client_fd);
 
 /**
  * Signals the given process to stop accepting new users and clean up. This
@@ -106,4 +107,3 @@ guacd_proc* guacd_create_proc(const char* protocol);
 void guacd_proc_stop(guacd_proc* proc);
 
 #endif
-

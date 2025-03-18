@@ -41,6 +41,7 @@
 #endif
 
 #include <freerdp/codec/color.h>
+#include <freerdp/server/pf_context.h>
 #include <freerdp/freerdp.h>
 #include <guacamole/audio.h>
 #include <guacamole/client.h>
@@ -180,29 +181,7 @@ typedef struct guac_rdp_client {
 
 } guac_rdp_client;
 
-/**
- * Client data that will remain accessible through the RDP context.
- * This should generally include data commonly used by FreeRDP handlers.
- */
-typedef struct rdp_freerdp_context {
-
-    /**
-     * The parent context. THIS MUST BE THE FIRST ELEMENT.
-     */
-    rdpContext _p;
-
-    /**
-     * Pointer to the guac_client instance handling the RDP connection with
-     * this context.
-     */
-    guac_client* client;
-
-    /**
-     * The current color palette, as received from the RDP server.
-     */
-    UINT32 palette[256];
-
-} rdp_freerdp_context;
+typedef pClientContext rdp_freerdp_context;
 
 /**
  * RDP client thread. This thread runs throughout the duration of the client,
@@ -217,6 +196,8 @@ typedef struct rdp_freerdp_context {
  *     ignored.
  */
 void* guac_rdp_client_thread(void* data);
+
+BOOL rdp_freerdp_pre_connect(freerdp* instance);
 
 #endif
 

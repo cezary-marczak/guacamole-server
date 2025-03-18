@@ -113,6 +113,7 @@ struct guac_socket {
      */
     pthread_t __keep_alive_thread;
 
+    int fd;
 };
 
 /**

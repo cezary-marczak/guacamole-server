@@ -128,7 +128,7 @@ void guac_client_free_stream(guac_client* client, guac_stream* stream) {
 
 }
 
-guac_client* guac_client_alloc() {
+guac_client* guac_client_alloc(int is_native) {
 
     int i;
     pthread_rwlockattr_t lock_attributes;
@@ -177,14 +177,15 @@ guac_client* guac_client_alloc() {
     pthread_rwlock_init(&(client->__users_lock), &lock_attributes);
 
     /* Set up socket to broadcast to all users */
-    client->socket = guac_socket_broadcast(client);
+    if (!is_native)
+        client->socket = guac_socket_broadcast(client);
 
     return client;
 
 }
 
 void guac_client_free(guac_client* client) {
-
+    guac_client_log(client, GUAC_LOG_DEBUG, "Freeing client: %p", client);
     /* Remove all users */
     while (client->__users != NULL)
         guac_client_remove_user(client, client->__users);
@@ -197,7 +198,9 @@ void guac_client_free(guac_client* client) {
     }
 
     /* Free socket */
-    guac_socket_free(client->socket);
+    if (client->socket) {
+        guac_socket_free(client->socket);
+    }
 
     /* Free layer pools */
     guac_pool_free(client->__buffer_pool);
@@ -215,16 +218,18 @@ void guac_client_free(guac_client* client) {
             guac_client_log(client, GUAC_LOG_ERROR, "Unable to close plugin: %s", dlerror());
     }
 
-    if (client->recording_path != NULL) {
+    if (client->recording_path != NULL)
+    {
         // Log the recording path once
         guac_client_log(client, GUAC_LOG_INFO, "Recording path: %s", client->recording_path);
 
         // Build the compression command
         int needed_size = snprintf(NULL, 0, "gzip -f %s", client->recording_path) + 1;
         char* command = malloc(needed_size);
-        if (!command) {
+        if (!command)
+        {
             guac_client_log(client, GUAC_LOG_ERROR, "Memory allocation failed for compression command");
-            free(client->recording_path);
+            free((void*)client->recording_path);
             return;
         }
 
@@ -233,11 +238,16 @@ void guac_client_free(guac_client* client) {
         // Log and execute the compression command
         guac_client_log(client, GUAC_LOG_INFO, "Start: Compressing file at path %s", client->recording_path);
         int ret = system(command);
-        if (ret == -1) {
+        if (ret == -1)
+        {
             guac_client_log(client, GUAC_LOG_ERROR, "Failed to execute gzip compression");
-        } else if (WIFEXITED(ret)) {
+        }
+        else if (WIFEXITED(ret))
+        {
             guac_client_log(client, GUAC_LOG_INFO, "gzip compression exited with status %d", WEXITSTATUS(ret));
-        } else {
+        }
+        else
+        {
             guac_client_log(client, GUAC_LOG_ERROR, "gzip compression terminated abnormally");
         }
 
@@ -245,7 +255,7 @@ void guac_client_free(guac_client* client) {
 
         // Clean up
         free(command);
-        free(client->recording_path);
+        free((void*)client->recording_path);
     }
 
 
@@ -459,8 +469,8 @@ int guac_client_end_frame(guac_client* client) {
     client->last_sent_timestamp = guac_timestamp_current();
 
     /* Log received timestamp and calculated lag (at TRACE level only) */
-    guac_client_log(client, GUAC_LOG_TRACE, "Server completed "
-            "frame %" PRIu64 "ms.", client->last_sent_timestamp);
+    // guac_client_log(client, GUAC_LOG_TRACE, "Server completed "
+    //         "frame %" PRIu64 "ms.", client->last_sent_timestamp);
 
     return guac_protocol_send_sync(client->socket, client->last_sent_timestamp);
 
@@ -476,7 +486,7 @@ int guac_client_load_plugin(guac_client* client, const char* protocol) {
         GUAC_PROTOCOL_LIBRARY_PREFIX;
 
     /* Type-pun for the sake of dlsym() - cannot typecast a void* to a function
-     * pointer otherwise */ 
+     * pointer otherwise */
     union {
         guac_client_init_handler* client_init;
         void* obj;
@@ -516,35 +526,32 @@ int guac_client_load_plugin(guac_client* client, const char* protocol) {
     client->__plugin_handle = client_plugin_handle;
 
     return alias.client_init(client);
-
 }
 
 /**
  * A callback function which is invoked by guac_client_owner_send_required() to
  * send the required parameters to the specified user, who is the owner of the
  * client session.
- * 
+ *
  * @param user
  *     The guac_user that will receive the required parameters, who is the owner
  *     of the client.
- * 
+ *
  * @param data
  *     A pointer to a NULL-terminated array of required parameters that will be
  *     passed on to the owner to continue the connection.
- * 
+ *
  * @return
  *     Zero if the operation succeeds or non-zero on failure, cast as a void*.
  */
 static void* guac_client_owner_send_required_callback(guac_user* user, void* data) {
-    
     const char** required = (const char **) data;
-    
+
     /* Send required parameters to owner. */
     if (user != NULL)
         return (void*) ((intptr_t) guac_protocol_send_required(user->socket, required));
-    
+
     return (void*) ((intptr_t) -1);
-    
 }
 
 int guac_client_owner_send_required(guac_client* client, const char** required) {
@@ -552,7 +559,7 @@ int guac_client_owner_send_required(guac_client* client, const char** required) 
     /* Don't send required instruction if client does not support it. */
     if (!guac_client_owner_supports_required(client))
         return -1;
-    
+
     return (int) ((intptr_t) guac_client_for_owner(client, guac_client_owner_send_required_callback, required));
 
 }
@@ -708,7 +715,6 @@ static void* __webp_support_callback(guac_user* user, void* data) {
         *webp_supported = guac_user_supports_webp(user);
 
     return NULL;
-
 }
 #endif
 
@@ -717,14 +723,14 @@ static void* __webp_support_callback(guac_user* user, void* data) {
  * to determine if the owner of a client supports the "msg" instruction,
  * returning zero if the user does not support the instruction or non-zero if
  * the user supports it.
- * 
+ *
  * @param user
  *     The guac_user that will be checked for "msg" instruction support.
- * 
+ *
  * @param data
  *     Data provided to the callback. This value is never used within this
  *     callback.
- * 
+ *
  * @return
  *     A non-zero integer if the provided user who owns the connection supports
  *     the "msg" instruction, or zero if the user does not. The integer is cast
@@ -739,7 +745,6 @@ static void* guac_owner_supports_msg_callback(guac_user* user, void* data) {
 int guac_client_owner_supports_msg(guac_client* client) {
 
     return (int) ((intptr_t) guac_client_for_owner(client, guac_owner_supports_msg_callback, NULL));
-
 }
 
 /**
@@ -747,29 +752,25 @@ int guac_client_owner_supports_msg(guac_client* client) {
  * to determine if the owner of a client supports the "required" instruction,
  * returning zero if the user does not support the instruction or non-zero if
  * the user supports it.
- * 
+ *
  * @param user
  *     The guac_user that will be checked for "required" instruction support.
- * 
+ *
  * @param data
  *     Data provided to the callback. This value is never used within this
  *     callback.
- * 
+ *
  * @return
  *     A non-zero integer if the provided user who owns the connection supports
  *     the "required" instruction, or zero if the user does not. The integer
  *     is cast as a void*.
  */
 static void* guac_owner_supports_required_callback(guac_user* user, void* data) {
-    
     return (void*) ((intptr_t) guac_user_supports_required(user));
-    
 }
 
 int guac_client_owner_supports_required(guac_client* client) {
-    
     return (int) ((intptr_t) guac_client_for_owner(client, guac_owner_supports_required_callback, NULL));
-    
 }
 
 /**
@@ -810,7 +811,7 @@ static void* guac_client_owner_notify_join_callback(guac_user* user, void* data)
 
     guac_user_log(user, GUAC_LOG_DEBUG, "Notifying owner \"%s\" of \"%s\" joining.",
             log_owner, log_joiner);
-    
+
     /* Send user joined notification to owner. */
     const char* args[] = { (const char*)joiner->user_id, (const char*)send_joiner, NULL };
     return (void*) ((intptr_t) guac_protocol_send_msg(user->socket, GUAC_MESSAGE_USER_JOINED, args));
@@ -869,7 +870,7 @@ static void* guac_client_owner_notify_leave_callback(guac_user* user, void* data
 
     guac_user_log(user, GUAC_LOG_DEBUG, "Notifying owner \"%s\" of \"%s\" leaving.",
             log_owner, log_quitter);
-    
+
     /* Send user left notification to owner. */
     const char* args[] = { (const char*)quitter->user_id, (const char*)send_quitter, NULL };
     return (void*) ((intptr_t) guac_protocol_send_msg(user->socket, GUAC_MESSAGE_USER_LEFT, args));
@@ -905,4 +906,3 @@ int guac_client_supports_webp(guac_client* client) {
 #endif
 
 }
-

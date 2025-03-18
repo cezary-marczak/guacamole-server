@@ -59,6 +59,8 @@ int guac_rdp_user_join_handler(guac_user* user, int argc, char** argv) {
         return 1;
     }
 
+    log_rdp_settings(user, settings);
+
     /* Store settings at user level */
     user->data = settings;
 

@@ -38,5 +38,5 @@ openssl genpkey -algorithm RSA -out /opt/guacamole/server.key -pkeyopt rsa_keyge
 openssl req -new -x509 -key /opt/guacamole/server.key -out /opt/guacamole/server.crt -days 365 -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
 #chown guacd:guacd /opt/guacamole/server.crt /opt/guacamole/server.key
 
-#su guacd --command "$@"
-exec "$@"
+ssh-keygen -A
+/usr/sbin/sshd -D

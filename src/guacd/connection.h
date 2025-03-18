@@ -73,6 +73,7 @@ typedef struct guacd_connection_thread_params {
  *     Always NULL.
  */
 void* guacd_connection_thread(void* data);
+void* guacd_native_connection_thread(void* data);
 
 /**
  * Parameters required by the per-connection I/O transfer thread.

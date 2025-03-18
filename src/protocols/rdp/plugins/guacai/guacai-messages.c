@@ -93,7 +93,7 @@ static void guac_rdp_ai_write_format(wStream* stream,
     Stream_Write_UINT16(stream, format->data_size); /* cbSize */
 
     /* Write arbitrary data block (if applicable) */
-    if (format->data_size != 0)
+    if (format->data_size != 0 && format->data != NULL)
         Stream_Write(stream, format->data, format->data_size);
 
 }
@@ -300,6 +300,7 @@ void guac_rdp_ai_process_formats(guac_client* client,
     for (index = 0; index < num_formats; index++) {
 
         guac_rdp_ai_format format;
+        format.data = NULL;
         if (guac_rdp_ai_read_format(stream, &format)) {
             guac_client_log(client, GUAC_LOG_WARNING, "Error occurred "
                     "processing audio input formats.  Audio input redirection "

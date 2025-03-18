@@ -29,7 +29,7 @@
 # used for C headers, locating libraries, etc.
 export CFLAGS="-I${PREFIX_DIR}/include"
 export LDFLAGS="-L${PREFIX_DIR}/lib"
-export PKG_CONFIG_PATH="${PREFIX_DIR}/lib/pkgconfig" 
+export PKG_CONFIG_PATH="${PREFIX_DIR}/lib/pkgconfig"
 
 # Ensure thread stack size will be 8 MB (glibc's default on Linux) rather than
 # 128 KB (musl's default)
@@ -40,6 +40,5 @@ export LDFLAGS="$LDFLAGS -Wl,-z,stack-size=8388608"
 #
 
 cd "$BUILD_DIR"
-autoreconf -fi && ./configure --prefix="$PREFIX_DIR" $GUACAMOLE_SERVER_OPTS
-make && make install
-
+autoreconf -fi --verbose && ./configure --prefix="$PREFIX_DIR"
+make V=1 -j4 || make V=1 && make install

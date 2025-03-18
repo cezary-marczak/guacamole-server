@@ -188,6 +188,7 @@ static guaclog_keydef* guaclog_get_unknown_key(int keysym) {
     /* Write keysym as hex */
     int size = snprintf(unknown_keydef_name, sizeof(unknown_keydef_name),
             "0x%X", keysym);
+    (void)size;
 
     /* Hex string is guaranteed to fit within the provided 64 bytes */
     assert(size < sizeof(unknown_keydef_name));

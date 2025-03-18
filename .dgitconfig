@@ -1,0 +1,11 @@
+[credential]
+	helper = osxkeychain
+[user]
+	name = Cezary Marczak
+	email = cezary@procyon.ai
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	precomposeunicode = true

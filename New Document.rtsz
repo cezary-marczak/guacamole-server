@@ -1,0 +1,339 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RTSZDocument>
+  <RoyalDocument>
+    <ID>eefb1eff-542c-4370-a02c-4a600b31cfad</ID>
+    <Modified>06/09/2025 21:39:31.521</Modified>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <Name>New Document</Name>
+    <Created>06/09/2025 21:18:11.476</Created>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>0</PositionNr>
+    <IsExpanded>True</IsExpanded>
+    <DocumentType>Workspace</DocumentType>
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+    <PasswordHash />
+    <AutoMergeOption>1</AutoMergeOption>
+    <SaveOption>2</SaveOption>
+  </RoyalDocument>
+  <RoyalTrash>
+    <ID>2dc147cf-2852-44de-8d9e-29b2e4e9a21d</ID>
+    <Name>Trashcan</Name>
+    <Modified>06/09/2025 21:18:11.490</Modified>
+    <Created>06/09/2025 21:18:11.477</Created>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>2</PositionNr>
+    <IsExpanded>False</IsExpanded>
+    <ParentID>eefb1eff-542c-4370-a02c-4a600b31cfad</ParentID>
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+  </RoyalTrash>
+  <RoyalRDSConnection>
+    <ID>bfd894c5-a282-4c11-a745-c51de1e2f9cc</ID>
+    <Name>cez-winproxy</Name>
+    <Modified>06/09/2025 21:39:26.907</Modified>
+    <Created>06/09/2025 21:19:27.578</Created>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>2</PositionNr>
+    <IsConnectionTemplate>False</IsConnectionTemplate>
+    <ParentID>2dc147cf-2852-44de-8d9e-29b2e4e9a21d</ParentID>
+    <ObjectSpecialUsage />
+    <URI>172.205.233.17</URI>
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+    <GatewayPassword />
+    <ProxyPassword />
+    <RDPPort>3389</RDPPort>
+    <Description />
+    <PhysicalAddress />
+    <CustomImageName />
+    <CustomImageList>{}</CustomImageList>
+    <CustomImage />
+    <ColorFromParent>False</ColorFromParent>
+    <ColorName />
+    <Color />
+    <Favorite>False</Favorite>
+  </RoyalRDSConnection>
+  <RoyalFolder>
+    <ID>92da0608-06c9-4f10-8beb-83d5ed5ca0c7</ID>
+    <Name>Connections</Name>
+    <Modified>06/09/2025 21:18:11.490</Modified>
+    <Created>06/09/2025 21:18:11.477</Created>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>4</PositionNr>
+    <IsExpanded>True</IsExpanded>
+    <ParentID>eefb1eff-542c-4370-a02c-4a600b31cfad</ParentID>
+    <ObjectSpecialUsage />
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+  </RoyalFolder>
+  <RoyalRDSConnection>
+    <ID>d76077b0-b1d0-4d0c-a8af-14393188741f</ID>
+    <Name>cez-controller</Name>
+    <Modified>06/18/2025 11:43:34.638</Modified>
+    <Created>06/09/2025 21:39:31.517</Created>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>2</PositionNr>
+    <IsConnectionTemplate>False</IsConnectionTemplate>
+    <ParentID>92da0608-06c9-4f10-8beb-83d5ed5ca0c7</ParentID>
+    <ObjectSpecialUsage />
+    <URI>procyon-cez-node.rdp.procyon.ai</URI>
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+    <GatewayPassword />
+    <ProxyPassword />
+    <RDPPort>3389</RDPPort>
+    <Description />
+    <PhysicalAddress />
+    <CustomImageName />
+    <CustomImageList>{}</CustomImageList>
+    <CustomImage />
+    <ColorFromParent>False</ColorFromParent>
+    <ColorName />
+    <Color />
+    <Favorite>False</Favorite>
+    <ColorDepth>32</ColorDepth>
+    <UseRetinaResolution>False</UseRetinaResolution>
+    <AutomaticallyCalculateScaleFactor>True</AutomaticallyCalculateScaleFactor>
+    <ScaleFactor>0</ScaleFactor>
+    <DesktopWidth>0</DesktopWidth>
+    <DesktopHeight>0</DesktopHeight>
+    <SmartSizing>False</SmartSizing>
+    <SmartReconnect>True</SmartReconnect>
+    <AuthenticationLevel>0</AuthenticationLevel>
+    <AuthenticationPackage>0</AuthenticationPackage>
+    <NetworkLevelAuthentication>True</NetworkLevelAuthentication>
+    <TLSEncryption>False</TLSEncryption>
+    <EnableRdsAadAuth>False</EnableRdsAadAuth>
+    <ConnectToAdministerOrConsole>False</ConnectToAdministerOrConsole>
+    <RestrictedAdminMode>False</RestrictedAdminMode>
+    <AuthenticateWithSmartCard>False</AuthenticateWithSmartCard>
+    <PasswordContainsSmartCardPin>False</PasswordContainsSmartCardPin>
+    <Compression>True</Compression>
+    <BitmapPersistence>True</BitmapPersistence>
+    <EnableGlyphCache>False</EnableGlyphCache>
+    <KeepAliveInterval>0</KeepAliveInterval>
+    <TCPConnectTimeout>15</TCPConnectTimeout>
+    <TCPACKTimeout>9</TCPACKTimeout>
+    <EnableAutoReconnect>True</EnableAutoReconnect>
+    <MaxReconnectAttempts>3</MaxReconnectAttempts>
+    <LoadBalanceInfo />
+    <NetworkConnectionType>0</NetworkConnectionType>
+    <AllowWallpaper>True</AllowWallpaper>
+    <AllowDesktopComposition>True</AllowDesktopComposition>
+    <AllowMenuAnimations>True</AllowMenuAnimations>
+    <AllowFullWindowDrag>True</AllowFullWindowDrag>
+    <AllowFontSmoothing>True</AllowFontSmoothing>
+    <AllowThemes>True</AllowThemes>
+    <RedirectDirectX>True</RedirectDirectX>
+    <EnableGraphicsPipeline>True</EnableGraphicsPipeline>
+    <AudioRedirectionMode>0</AudioRedirectionMode>
+    <AudioCaptureRedirectionMode>False</AudioCaptureRedirectionMode>
+    <RedirectPrinters>False</RedirectPrinters>
+    <RedirectClipboard>True</RedirectClipboard>
+    <RedirectSmartCards>False</RedirectSmartCards>
+    <RedirectDrives>True</RedirectDrives>
+    <Drives>{HomeDirectory}</Drives>
+    <EnableWindowsKey>True</EnableWindowsKey>
+    <EnableConvenienceKeyForwards>True</EnableConvenienceKeyForwards>
+    <SendUnicodeKeyboardEvents>False</SendUnicodeKeyboardEvents>
+    <KeyboardLayoutStr />
+    <StartProgram />
+    <WorkDir />
+    <MaximizeShell>False</MaximizeShell>
+    <RDSGatewayFromParent>False</RDSGatewayFromParent>
+    <GatewayMode>0</GatewayMode>
+    <GatewayUsageMethod>0</GatewayUsageMethod>
+    <RDSGatewayID>00000000-0000-0000-0000-000000000000</RDSGatewayID>
+    <GatewayTransportType>0</GatewayTransportType>
+    <GatewayHostName />
+    <GatewayCredentialMode>0</GatewayCredentialMode>
+    <GatewayUserName />
+    <GatewayCredentialName />
+    <ProxyMode>0</ProxyMode>
+    <ProxyServer />
+    <ProxyPort>8080</ProxyPort>
+    <ProxyCredentialMode>0</ProxyCredentialMode>
+    <ProxyUserName />
+    <ProxyCredentialName />
+    <HyperVMode>0</HyperVMode>
+    <HyperVPort>2179</HyperVPort>
+    <HyperVInstance />
+    <HyperVEnhancedSessionMode>False</HyperVEnhancedSessionMode>
+    <CredentialFromParent>False</CredentialFromParent>
+    <CredentialMode>2</CredentialMode>
+    <CredentialAutologon>True</CredentialAutologon>
+    <CredentialOmitDomain>False</CredentialOmitDomain>
+    <CredentialUsername />
+    <CredentialName />
+    <PreConnectTaskFromParent>False</PreConnectTaskFromParent>
+    <PreConnectTaskMode>1</PreConnectTaskMode>
+    <PreConnectTaskId>00000000-0000-0000-0000-000000000000</PreConnectTaskId>
+    <PreConnectTaskName />
+    <PreConnectTaskWait>False</PreConnectTaskWait>
+    <PostDisconnectTaskFromParent>False</PostDisconnectTaskFromParent>
+    <PostDisconnectTaskMode>1</PostDisconnectTaskMode>
+    <PostDisconnectTaskId>00000000-0000-0000-0000-000000000000</PostDisconnectTaskId>
+    <PostDisconnectTaskName />
+    <PostDisconnectTaskWait>False</PostDisconnectTaskWait>
+    <KeySequenceFromParent>False</KeySequenceFromParent>
+    <KeySequenceEnabled>False</KeySequenceEnabled>
+    <KeySequence />
+    <KeySequenceId>00000000-0000-0000-0000-000000000000</KeySequenceId>
+    <KeySequenceName />
+    <DisplayMode>0</DisplayMode>
+    <UseMultiMon>False</UseMultiMon>
+    <ExternalScreenMode>0</ExternalScreenMode>
+    <ExternalScreenOSX>0</ExternalScreenOSX>
+    <DashboardUseAppSettings>True</DashboardUseAppSettings>
+    <ManagementEndpointFromParent>False</ManagementEndpointFromParent>
+    <ManagementEndpointID>00000000-0000-0000-0000-000000000000</ManagementEndpointID>
+    <SecureGatewayFromParent>False</SecureGatewayFromParent>
+    <SecureGatewayUsageMode>0</SecureGatewayUsageMode>
+    <SecureGatewayID>00000000-0000-0000-0000-000000000000</SecureGatewayID>
+    <UseGlobalPlugInOSX>True</UseGlobalPlugInOSX>
+    <PlugInOSX>1C919170-3EE3-437F-9326-A2316A9293A0</PlugInOSX>
+    <NotesFromParent>False</NotesFromParent>
+    <Notes />
+    <CustomPropertiesFromParent>False</CustomPropertiesFromParent>
+    <CustomField1 />
+    <CustomField1FromParent>False</CustomField1FromParent>
+    <CustomField2 />
+    <CustomField2FromParent>False</CustomField2FromParent>
+    <CustomField3 />
+    <CustomField3FromParent>False</CustomField3FromParent>
+    <CustomField4 />
+    <CustomField4FromParent>False</CustomField4FromParent>
+    <CustomField5 />
+    <CustomField5FromParent>False</CustomField5FromParent>
+    <CustomField6 />
+    <CustomField6FromParent>False</CustomField6FromParent>
+    <CustomField7 />
+    <CustomField7FromParent>False</CustomField7FromParent>
+    <CustomField8 />
+    <CustomField8FromParent>False</CustomField8FromParent>
+    <CustomField9 />
+    <CustomField9FromParent>False</CustomField9FromParent>
+    <CustomField10 />
+    <CustomField10FromParent>False</CustomField10FromParent>
+    <CustomField11FromParent>False</CustomField11FromParent>
+    <CustomField12FromParent>False</CustomField12FromParent>
+    <CustomField13FromParent>False</CustomField13FromParent>
+    <CustomField14FromParent>False</CustomField14FromParent>
+    <CustomField15FromParent>False</CustomField15FromParent>
+    <CustomField16FromParent>False</CustomField16FromParent>
+    <CustomField17FromParent>False</CustomField17FromParent>
+    <CustomField18FromParent>False</CustomField18FromParent>
+    <CustomField19FromParent>False</CustomField19FromParent>
+    <CustomField20FromParent>False</CustomField20FromParent>
+  </RoyalRDSConnection>
+  <RoyalFolder>
+    <ID>1cdeecf9-7d3e-413b-9151-db719fe426a5</ID>
+    <Name>Credentials</Name>
+    <Modified>06/09/2025 21:18:11.491</Modified>
+    <Created>06/09/2025 21:18:11.485</Created>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>6</PositionNr>
+    <IsExpanded>False</IsExpanded>
+    <ParentID>eefb1eff-542c-4370-a02c-4a600b31cfad</ParentID>
+    <ObjectSpecialUsage />
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+  </RoyalFolder>
+  <RoyalFolder>
+    <ID>c668ccc8-bd48-4784-b771-4f486f41cb18</ID>
+    <Name>Tasks</Name>
+    <Modified>06/09/2025 21:18:11.491</Modified>
+    <Created>06/09/2025 21:18:11.486</Created>
+    <ModifiedBy>cezarymarczak</ModifiedBy>
+    <CreatedBy>cezarymarczak</CreatedBy>
+    <PositionNr>8</PositionNr>
+    <IsExpanded>False</IsExpanded>
+    <ParentID>eefb1eff-542c-4370-a02c-4a600b31cfad</ParentID>
+    <ObjectSpecialUsage />
+    <CustomField11 />
+    <CustomField12 />
+    <CustomField13 />
+    <CustomField14 />
+    <CustomField15 />
+    <CustomField16 />
+    <CustomField17 />
+    <CustomField18 />
+    <CustomField19 />
+    <CustomField20 />
+    <CustomProperties />
+    <CredentialPassword />
+    <CredentialPassphrase />
+  </RoyalFolder>
+</RTSZDocument>

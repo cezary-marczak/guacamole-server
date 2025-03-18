@@ -78,6 +78,7 @@ typedef void guac_client_log_handler(guac_client* client,
  *     Zero on success, non-zero if initialization fails for any reason.
  */
 typedef int guac_client_init_handler(guac_client* client);
+typedef int guac_rdp_proxy_connect_handler(guac_client* client, int fd);
 
 #endif
 

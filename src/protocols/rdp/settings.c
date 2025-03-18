@@ -778,18 +778,35 @@ guac_rdp_settings* guac_rdp_parse_args(guac_user* user,
             user->info.optimal_height,
             user->info.optimal_resolution);
 
+    int sug_res = guac_rdp_suggest_resolution(user);
+    guac_user_log(user, GUAC_LOG_DEBUG,
+            "Suggested resolution is %ix%i at %i DPI",
+            user->info.optimal_width,
+            user->info.optimal_height,
+            sug_res);
+
     /* Use suggested resolution unless overridden */
     settings->resolution =
         guac_user_parse_args_int(user, GUAC_RDP_CLIENT_ARGS, argv,
-                IDX_DPI, guac_rdp_suggest_resolution(user));
+                IDX_DPI, sug_res);
+
+    guac_user_log(user, GUAC_LOG_DEBUG,
+            "Using resolution of %ix%i at %i DPI",
+            user->info.optimal_width,
+            user->info.optimal_height,
+            settings->resolution);
 
     /* Use optimal width unless overridden */
     settings->width = user->info.optimal_width
                     * settings->resolution
                     / user->info.optimal_resolution;
 
-    if (argv[IDX_WIDTH][0] != '\0')
+    if (argv[IDX_WIDTH][0] != '\0') {
+        guac_user_log(user, GUAC_LOG_DEBUG,
+                "Overriding optimal width %i with user-specified width %s",
+                settings->width, argv[IDX_WIDTH]);
         settings->width = atoi(argv[IDX_WIDTH]);
+    }
 
     /* Use default width if given width is invalid. */
     if (settings->width <= 0) {
@@ -828,6 +845,10 @@ guac_rdp_settings* guac_rdp_parse_args(guac_user* user,
     settings->lossless =
         guac_user_parse_args_boolean(user, GUAC_RDP_CLIENT_ARGS, argv,
                 IDX_FORCE_LOSSLESS, 0);
+
+    guac_user_log(user, GUAC_LOG_DEBUG,
+            "Lossless updates: %s",
+            settings->lossless ? "enabled" : "disabled");
 
     /* Domain */
     settings->domain =
@@ -1615,3 +1636,139 @@ void guac_rdp_push_settings(guac_client* client,
 
 }
 
+void log_rdp_settings(guac_user* user, const guac_rdp_settings* settings) {
+
+    /* Basic connection info */
+    guac_user_log(user, GUAC_LOG_DEBUG, "RDP Settings Dump:");
+    guac_user_log(user, GUAC_LOG_DEBUG, "------------------------------------------------");
+    guac_user_log(user, GUAC_LOG_DEBUG, "hostname:              %s", settings->hostname);
+    guac_user_log(user, GUAC_LOG_DEBUG, "port:                  %d", settings->port);
+    guac_user_log(user, GUAC_LOG_DEBUG, "domain:                %s", settings->domain);
+    guac_user_log(user, GUAC_LOG_DEBUG, "username:              %s", settings->username);
+    guac_user_log(user, GUAC_LOG_DEBUG, "password:              %s", settings->password);
+    guac_user_log(user, GUAC_LOG_DEBUG, "read_only:             %d", settings->read_only);
+
+    /* Display settings */
+    guac_user_log(user, GUAC_LOG_DEBUG, "color_depth:           %d", settings->color_depth);
+    guac_user_log(user, GUAC_LOG_DEBUG, "width:                 %d", settings->width);
+    guac_user_log(user, GUAC_LOG_DEBUG, "height:                %d", settings->height);
+    guac_user_log(user, GUAC_LOG_DEBUG, "resolution (DPI):      %d", settings->resolution);
+    guac_user_log(user, GUAC_LOG_DEBUG, "lossless:              %d", settings->lossless);
+
+    /* Feature flags */
+    guac_user_log(user, GUAC_LOG_DEBUG, "audio_enabled:         %d", settings->audio_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "printing_enabled:      %d", settings->printing_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "printer_name:          %s", settings->printer_name);
+    guac_user_log(user, GUAC_LOG_DEBUG, "drive_enabled:         %d", settings->drive_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "drive_name:            %s", settings->drive_name);
+    guac_user_log(user, GUAC_LOG_DEBUG, "drive_path:            %s", settings->drive_path);
+    guac_user_log(user, GUAC_LOG_DEBUG, "create_drive_path:     %d", settings->create_drive_path);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_download:      %d", settings->disable_download);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_upload:        %d", settings->disable_upload);
+
+    /* Console session */
+    guac_user_log(user, GUAC_LOG_DEBUG, "console:               %d", settings->console);
+    guac_user_log(user, GUAC_LOG_DEBUG, "console_audio:         %d", settings->console_audio);
+
+    /* Keyboard layout */
+    guac_user_log(user, GUAC_LOG_DEBUG, "server_layout:         %p", (void*)settings->server_layout);
+
+    /* Remote application */
+    guac_user_log(user, GUAC_LOG_DEBUG, "initial_program:       %s", settings->initial_program);
+    guac_user_log(user, GUAC_LOG_DEBUG, "client_name:           %s", settings->client_name);
+    guac_user_log(user, GUAC_LOG_DEBUG, "security_mode:         %d", settings->security_mode);
+    guac_user_log(user, GUAC_LOG_DEBUG, "ignore_certificate:    %d", settings->ignore_certificate);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_authentication:%d", settings->disable_authentication);
+    guac_user_log(user, GUAC_LOG_DEBUG, "remote_app:            %s", settings->remote_app);
+    guac_user_log(user, GUAC_LOG_DEBUG, "remote_app_dir:        %s", settings->remote_app_dir);
+    guac_user_log(user, GUAC_LOG_DEBUG, "remote_app_args:       %s", settings->remote_app_args);
+
+    /* Static virtual channels */
+    if (settings->svc_names) {
+        int i = 0;
+        while (settings->svc_names[i] != NULL) {
+            guac_user_log(user, GUAC_LOG_DEBUG,
+                          "svc_names[%d]:          %s", i, settings->svc_names[i]);
+            i++;
+        }
+    }
+    else {
+        guac_user_log(user, GUAC_LOG_DEBUG, "svc_names:             (none)");
+    }
+
+    /* Clipboard */
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_copy:          %d", settings->disable_copy);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_paste:         %d", settings->disable_paste);
+    guac_user_log(user, GUAC_LOG_DEBUG, "normalize_clipboard:   %d", settings->normalize_clipboard);
+    guac_user_log(user, GUAC_LOG_DEBUG, "clipboard_crlf:        %d", settings->clipboard_crlf);
+
+    /* Performance flags */
+    guac_user_log(user, GUAC_LOG_DEBUG, "wallpaper_enabled:     %d", settings->wallpaper_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "theming_enabled:       %d", settings->theming_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "font_smoothing_enabled:%d", settings->font_smoothing_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "full_window_drag_enabled:   %d", settings->full_window_drag_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "desktop_composition_enabled:%d", settings->desktop_composition_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "menu_animations_enabled:    %d", settings->menu_animations_enabled);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_bitmap_caching:     %d", settings->disable_bitmap_caching);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_offscreen_caching:  %d", settings->disable_offscreen_caching);
+    guac_user_log(user, GUAC_LOG_DEBUG, "disable_glyph_caching:      %d", settings->disable_glyph_caching);
+
+    /* Preconnection */
+    guac_user_log(user, GUAC_LOG_DEBUG, "preconnection_id:      %d", settings->preconnection_id);
+    guac_user_log(user, GUAC_LOG_DEBUG, "preconnection_blob:    %s", settings->preconnection_blob);
+
+    /* Timezone */
+    guac_user_log(user, GUAC_LOG_DEBUG, "timezone:              %s", settings->timezone);
+
+#ifdef ENABLE_COMMON_SSH
+    /* SFTP / SSH-related */
+    guac_user_log(user, GUAC_LOG_DEBUG, "enable_sftp:           %d", settings->enable_sftp);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_hostname:         %s", settings->sftp_hostname);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_host_key:         %s", settings->sftp_host_key);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_port:             %s", settings->sftp_port);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_username:         %s", settings->sftp_username);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_password:         %s", settings->sftp_password);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_private_key:      %s", settings->sftp_private_key);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_passphrase:       %s", settings->sftp_passphrase);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_directory:        %s", settings->sftp_directory);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_root_directory:   %s", settings->sftp_root_directory);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_server_alive_interval:%d", settings->sftp_server_alive_interval);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_disable_download: %d", settings->sftp_disable_download);
+    guac_user_log(user, GUAC_LOG_DEBUG, "sftp_disable_upload:   %d", settings->sftp_disable_upload);
+#endif
+
+    /* Screen recording */
+    guac_user_log(user, GUAC_LOG_DEBUG, "recording_path:        %s", settings->recording_path);
+    guac_user_log(user, GUAC_LOG_DEBUG, "recording_name:        %s", settings->recording_name);
+    guac_user_log(user, GUAC_LOG_DEBUG, "create_recording_path: %d", settings->create_recording_path);
+    guac_user_log(user, GUAC_LOG_DEBUG, "recording_exclude_output: %d", settings->recording_exclude_output);
+    guac_user_log(user, GUAC_LOG_DEBUG, "recording_exclude_mouse:  %d", settings->recording_exclude_mouse);
+    guac_user_log(user, GUAC_LOG_DEBUG, "recording_exclude_touch:  %d", settings->recording_exclude_touch);
+    guac_user_log(user, GUAC_LOG_DEBUG, "recording_include_keys:   %d", settings->recording_include_keys);
+
+    /* Resize method */
+    guac_user_log(user, GUAC_LOG_DEBUG, "resize_method:         %d", settings->resize_method);
+
+    /* Other device / channel capabilities */
+    guac_user_log(user, GUAC_LOG_DEBUG, "enable_audio_input:    %d", settings->enable_audio_input);
+    guac_user_log(user, GUAC_LOG_DEBUG, "enable_touch:          %d", settings->enable_touch);
+
+    /* Gateway settings */
+    guac_user_log(user, GUAC_LOG_DEBUG, "gateway_hostname:      %s", settings->gateway_hostname);
+    guac_user_log(user, GUAC_LOG_DEBUG, "gateway_port:          %d", settings->gateway_port);
+    guac_user_log(user, GUAC_LOG_DEBUG, "gateway_domain:        %s", settings->gateway_domain);
+    guac_user_log(user, GUAC_LOG_DEBUG, "gateway_username:      %s", settings->gateway_username);
+    guac_user_log(user, GUAC_LOG_DEBUG, "gateway_password:      %s", settings->gateway_password);
+
+    /* Load balancing */
+    guac_user_log(user, GUAC_LOG_DEBUG, "load_balance_info:     %s", settings->load_balance_info);
+
+    /* Wake-on-LAN */
+    guac_user_log(user, GUAC_LOG_DEBUG, "wol_send_packet:       %d", settings->wol_send_packet);
+    guac_user_log(user, GUAC_LOG_DEBUG, "wol_mac_addr:          %s", settings->wol_mac_addr);
+    guac_user_log(user, GUAC_LOG_DEBUG, "wol_broadcast_addr:    %s", settings->wol_broadcast_addr);
+    guac_user_log(user, GUAC_LOG_DEBUG, "wol_udp_port:          %hu", settings->wol_udp_port);
+    guac_user_log(user, GUAC_LOG_DEBUG, "wol_wait_time:         %d", settings->wol_wait_time);
+
+    guac_user_log(user, GUAC_LOG_DEBUG, "------------------------------------------------");
+}

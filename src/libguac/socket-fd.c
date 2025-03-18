@@ -30,6 +30,8 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #ifdef ENABLE_WINSOCK
 #include <winsock2.h>
@@ -379,6 +381,35 @@ static int guac_socket_fd_free_handler(guac_socket* socket) {
     pthread_mutex_destroy(&(data->socket_lock));
     pthread_mutex_destroy(&(data->buffer_lock));
 
+//     struct stat st;
+//     if (fstat(data->fd, &st) == -1) {
+//         fprintf(stderr, "Error: Could not stat file descriptor: %d\n", data->fd);
+//         goto cleanup;
+//     }
+//
+//     /* Check if it's a regular file */
+//     if (!S_ISREG(st.st_mode)) {
+//         fprintf(stderr, "The file descriptor refers to a regular file: %d\n", data->fd);
+//         goto cleanup;
+//     }
+//
+//     /* Explicit file locks are required only on POSIX platforms */
+// #ifndef __MINGW32__
+//     /* Unlock output file */
+//     struct flock file_lock = {
+//             .l_type   = F_UNLCK,
+//             .l_whence = SEEK_SET,
+//             .l_start  = 0,
+//             .l_len    = 0,
+//     };
+//
+//     if (fcntl(data->fd, F_SETLK, &file_lock) == -1) {
+//         fprintf(stderr, "Error: Could not unlock file descriptor: %d\n", data->fd);
+//         goto cleanup;
+//     }
+// #endif
+//
+// cleanup:
     /* Close file descriptor */
     close(data->fd);
 
@@ -445,7 +476,7 @@ guac_socket* guac_socket_open(int fd) {
     socket->unlock_handler = guac_socket_fd_unlock_handler;
     socket->flush_handler  = guac_socket_fd_flush_handler;
     socket->free_handler   = guac_socket_fd_free_handler;
-
+    socket->fd = fd;
     return socket;
 
 }

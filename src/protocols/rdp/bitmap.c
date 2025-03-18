@@ -35,7 +35,7 @@
 void guac_rdp_cache_bitmap(rdpContext* context, rdpBitmap* bitmap) {
 
     guac_client* client = ((rdp_freerdp_context*) context)->client;
-    guac_rdp_client* rdp_client = (guac_rdp_client*) client->data;
+    guac_rdp_client* rdp_client = client->data;
 
     /* Allocate buffer */
     guac_common_display_layer* buffer = guac_common_display_alloc_buffer(
@@ -58,17 +58,21 @@ void guac_rdp_cache_bitmap(rdpContext* context, rdpBitmap* bitmap) {
     }
 
     /* Store buffer reference in bitmap */
-    ((guac_rdp_bitmap*) bitmap)->layer = buffer;
+    bitmap->layer = buffer;
 
 }
 
 BOOL guac_rdp_bitmap_new(rdpContext* context, rdpBitmap* bitmap) {
 
+    // guac_client_log(((rdp_freerdp_context*) context)->client, GUAC_LOG_DEBUG,
+    //         "Allocating new bitmap at %ix%i",
+    //         bitmap->width, bitmap->height);
+
     /* No corresponding surface yet - caching is deferred. */
-    ((guac_rdp_bitmap*) bitmap)->layer = NULL;
+    bitmap->layer = NULL;
 
     /* Start at zero usage */
-    ((guac_rdp_bitmap*) bitmap)->used = 0;
+    bitmap->used = 0;
 
     return TRUE;
 
@@ -76,16 +80,19 @@ BOOL guac_rdp_bitmap_new(rdpContext* context, rdpBitmap* bitmap) {
 
 BOOL guac_rdp_bitmap_paint(rdpContext* context, rdpBitmap* bitmap) {
 
+    // guac_client_log(((rdp_freerdp_context*) context)->client, GUAC_LOG_DEBUG,
+    //         "Painting bitmap at %i, %i", bitmap->left, bitmap->top);
+
     guac_client* client = ((rdp_freerdp_context*) context)->client;
     guac_rdp_client* rdp_client = (guac_rdp_client*) client->data;
 
-    guac_common_display_layer* buffer = ((guac_rdp_bitmap*) bitmap)->layer;
+    guac_common_display_layer* buffer = bitmap->layer;
 
     int width = bitmap->right - bitmap->left + 1;
     int height = bitmap->bottom - bitmap->top + 1;
 
     /* If not cached, cache if necessary */
-    if (buffer == NULL && ((guac_rdp_bitmap*) bitmap)->used >= 1)
+    if (buffer == NULL && bitmap->used >= 1)
         guac_rdp_cache_bitmap(context, bitmap);
 
     /* If cached, retrieve from cache */
@@ -112,7 +119,7 @@ BOOL guac_rdp_bitmap_paint(rdpContext* context, rdpBitmap* bitmap) {
     }
 
     /* Increment usage counter */
-    ((guac_rdp_bitmap*) bitmap)->used++;
+    bitmap->used++;
 
     return TRUE;
 
@@ -121,20 +128,26 @@ BOOL guac_rdp_bitmap_paint(rdpContext* context, rdpBitmap* bitmap) {
 void guac_rdp_bitmap_free(rdpContext* context, rdpBitmap* bitmap) {
 
     guac_client* client = ((rdp_freerdp_context*) context)->client;
+    // guac_client_log(client, GUAC_LOG_INFO, "Freeing bitmap.");
     guac_rdp_client* rdp_client = (guac_rdp_client*) client->data;
     guac_common_display_layer* buffer = ((guac_rdp_bitmap*) bitmap)->layer;
 
     /* If cached, free buffer */
-    if (buffer != NULL)
+    if (buffer != NULL) {
+
         guac_common_display_free_buffer(rdp_client->display, buffer);
+    }
 
 #ifndef FREERDP_BITMAP_FREE_FREES_BITMAP
     /* NOTE: Except in FreeRDP 2.0.0-rc0 and earlier, FreeRDP-allocated memory
      * for the rdpBitmap will NOT be automatically released after this free
      * handler is invoked, thus we must do so manually here */
 
-    _aligned_free(bitmap->data);
-    free(bitmap);
+    rdp_freerdp_context* client_context = (rdp_freerdp_context*) context;
+    if (!client_context->is_native) {
+        _aligned_free(bitmap->data);
+        free(bitmap);
+    }
 #endif
 
 }
@@ -159,9 +172,8 @@ BOOL guac_rdp_bitmap_setsurface(rdpContext* context, rdpBitmap* bitmap, BOOL pri
         if (((guac_rdp_bitmap*) bitmap)->layer == NULL)
             guac_rdp_cache_bitmap(context, bitmap);
 
-        rdp_client->current_surface =
-            ((guac_rdp_bitmap*) bitmap)->layer->surface;
-
+        guac_common_display_layer* layer = ((guac_rdp_bitmap*) bitmap)->layer;
+        rdp_client->current_surface = layer->surface;
     }
 
     return TRUE;

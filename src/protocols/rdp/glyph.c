@@ -124,8 +124,11 @@ void guac_rdp_glyph_free(rdpContext* context, rdpGlyph* glyph) {
      * automatically released after this free handler is invoked, thus we must
      * do so manually here */
 
-    free(glyph->aj);
-    free(glyph);
+    rdp_freerdp_context* client_context = (rdp_freerdp_context*) context;
+    if (!client_context->is_native) {
+        free(glyph->aj);
+        free(glyph);
+    }
 
 }
 

@@ -208,6 +208,8 @@ guac_recording* guac_recording_create(guac_client* client,
                 "Creation of recording failed: %s", strerror(errno));
         return NULL;
     }
+    guac_client_log(client, GUAC_LOG_INFO, "Recording file opened fd: %d, output: %d, pointer: %d", fd, include_output,
+                    include_mouse);
 
     /* Create recording structure with reference to underlying socket */
     guac_recording* recording = malloc(sizeof(guac_recording));
@@ -216,6 +218,12 @@ guac_recording* guac_recording_create(guac_client* client,
     recording->include_mouse = include_mouse;
     recording->include_touch = include_touch;
     recording->include_keys = include_keys;
+    client->recording_path = strdup(filename);
+    if (client->recording_path == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Not enough memory to store recording path: %s", filename);
+        free(recording);
+        return NULL;
+    }
 
     /* Replace client socket with wrapped recording socket only if including
      * output within the recording */
@@ -232,15 +240,8 @@ guac_recording* guac_recording_create(guac_client* client,
 }
 
 void guac_recording_free(guac_recording* recording) {
-
-    /* If not including broadcast output, the output socket is not associated
-     * with the client, and must be freed manually */
-    if (!recording->include_output)
-        guac_socket_free(recording->socket);
-
     /* Free recording itself */
     free(recording);
-
 }
 
 void guac_recording_report_mouse(guac_recording* recording,

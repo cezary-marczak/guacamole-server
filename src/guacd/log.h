@@ -68,5 +68,7 @@ void guacd_log_guac_error(guac_client_log_level level, const char* message);
  */
 void guacd_log_handshake_failure();
 
+int guacd_get_log_level();
+
 #endif
 

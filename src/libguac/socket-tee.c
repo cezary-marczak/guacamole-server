@@ -209,6 +209,9 @@ static int __guac_socket_tee_free_handler(guac_socket* socket) {
 
 guac_socket* guac_socket_tee(guac_socket* primary, guac_socket* secondary) {
 
+    if (primary == NULL)
+        return secondary;
+
     /* Set up socket to split outout into a file */
     guac_socket_tee_data* data = malloc(sizeof(guac_socket_tee_data));
     data->primary = primary;

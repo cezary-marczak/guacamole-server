@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#define _GNU_SOURCE
+
 #include "config.h"
 #include "log.h"
 
@@ -26,7 +28,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <syslog.h>
+#include <bits/syscall.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <winpr/sysinfo.h>
 
 int guacd_log_level = GUAC_LOG_INFO;
 
@@ -88,9 +93,15 @@ void vguacd_log(guac_client_log_level level, const char* format,
     /* Log to syslog */
     syslog(priority, "%s", message);
 
+    /* On Linux we prefer to see the LWP id */
+    unsigned long tid = (size_t)syscall(SYS_gettid);
+    SYSTEMTIME localTime;
+    GetLocalTime(&localTime);
+
     /* Log to STDERR */
-    fprintf(stderr, GUACD_LOG_NAME "[%i]: %s:\t%s\n",
-            getpid(), priority_name, message);
+    fprintf(stderr, GUACD_LOG_NAME "[%u:%lu][%02u:%02u:%02u:%03u]: %s:\t%s\n",
+            getpid(), tid, localTime.wHour, localTime.wMinute, localTime.wSecond, localTime.wMilliseconds,
+            priority_name, message);
 
 }
 
@@ -104,6 +115,11 @@ void guacd_log(guac_client_log_level level, const char* format, ...) {
 void guacd_client_log(guac_client* client, guac_client_log_level level,
         const char* format, va_list args) {
     vguacd_log(level, format, args);
+}
+
+int guacd_get_log_level()
+{
+    return guacd_log_level;
 }
 
 void guacd_log_guac_error(guac_client_log_level level, const char* message) {

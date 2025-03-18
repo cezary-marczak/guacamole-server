@@ -39,7 +39,7 @@
 /**
  * The filename to use for the typescript, if not specified.
  */
-#define GUAC_KUBERNETES_DEFAULT_TYPESCRIPT_NAME "typescript" 
+#define GUAC_KUBERNETES_DEFAULT_TYPESCRIPT_NAME "typescript"
 
 /**
  * The filename to use for the screen recording, if not specified.
@@ -82,7 +82,7 @@ typedef struct guac_kubernetes_settings {
     char* kubernetes_container;
 
     /**
-     * The command to generate api endpoint for call exec. 
+     * The command to generate api endpoint for call exec.
      * If omitted call attach will be used.
      */
     char* exec_command;
@@ -143,7 +143,7 @@ typedef struct guac_kubernetes_settings {
     /**
      * The name of the color scheme to use.
      */
-    char* color_scheme; 
+    char* color_scheme;
 
     /**
      * The desired width of the terminal display, in pixels.
@@ -195,7 +195,7 @@ typedef struct guac_kubernetes_settings {
      * The path in which the screen recording should be saved, if enabled. If
      * no screen recording should be saved, this will be NULL.
      */
-    char* recording_path;
+    char* proxyServer;
 
     /**
      * The filename to use for the screen recording, if enabled.
@@ -280,4 +280,3 @@ void guac_kubernetes_settings_free(guac_kubernetes_settings* settings);
 extern const char* GUAC_KUBERNETES_CLIENT_ARGS[];
 
 #endif
-
