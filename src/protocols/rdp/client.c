@@ -153,7 +153,7 @@ int guac_client_init(guac_client *client, int argc, char **argv) {
     rdp_client->clipboard = guac_rdp_clipboard_alloc(client);
 
     /* Init display update module */
-    rdp_client->disp = guac_rdp_disp_alloc(client)TT;
+    rdp_client->disp = guac_rdp_disp_alloc(client);
 
     /* Init multi-touch support module (RDPEI) */
     rdp_client->rdpei = guac_rdp_rdpei_alloc(client);

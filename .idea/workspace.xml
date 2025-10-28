@@ -136,26 +136,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cef6e806-aac5-4804-9c17-8820b29debe5" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.dgitconfig" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/editor.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/guacamole-server.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/material_theme_project_new.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/other.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/New Document.rtsz" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/initenv.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile.test" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile.test" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build-docker.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build-docker.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/entrypoint-dev.sh" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint-dev.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/guacd-docker/bin/build-deps.sh" beforeDir="false" afterPath="$PROJECT_DIR$/src/guacd-docker/bin/build-deps.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/protocols/kubernetes/settings.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/protocols/kubernetes/settings.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/other.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/protocols/rdp/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/protocols/rdp/client.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -172,6 +156,9 @@
     </projectState>
   </component>
   <component name="GOROOT" url="file://$USER_HOME$/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.9.darwin-arm64" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="MakefileLocalSettings">
     <option name="toolchainName" value="Remote Host" />
     <option name="availableProjects">
@@ -216,36 +203,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.GoLinterPluginOnboarding&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.GoLinterPluginStorageMigration&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.RadMigrateCodeStyle&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;SHELLCHECK.PATH&quot;: &quot;/Users/cezarymarczak/Library/Application Support/JetBrains/CLion2025.1/plugins/Shell Script/shellcheck&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
-    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Volumes/Code/guacamole-server&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.GoLinterPluginOnboarding": "true",
+    "RunOnceActivity.GoLinterPluginStorageMigration": "true",
+    "RunOnceActivity.RadMigrateCodeStyle": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "SHELLCHECK.PATH": "/Users/cezarymarczak/Library/Application Support/JetBrains/CLion2025.1/plugins/Shell Script/shellcheck",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "f6a59000",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/Volumes/Code/guacamole-server",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Native Application.all">
     <configuration name="CONTRIBUTING" type="CLionNativeAppRunConfigurationType" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="guacamole-server" TARGET_NAME="CONTRIBUTING" CONFIG_NAME="CONTRIBUTING" version="1">
       <method v="2">
@@ -823,13 +811,23 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Native Application.all" />
+      <item itemvalue="Native Application.CONTRIBUTING" />
+      <item itemvalue="Native Application.CTAGS" />
+      <item itemvalue="Native Application.Dockerfile" />
+      <item itemvalue="Native Application.GTAGS" />
+      <item itemvalue="Native Application.ID" />
+      <item itemvalue="Native Application.LICENSE" />
+      <item itemvalue="Native Application.NOTICE" />
+      <item itemvalue="Native Application.README" />
+      <item itemvalue="Native Application.TAGS" />
       <item itemvalue="Native Application.all-am" />
       <item itemvalue="Native Application.all-recursive" />
+      <item itemvalue="Native Application.all" />
       <item itemvalue="Native Application.am--refresh" />
-      <item itemvalue="Native Application.check" />
       <item itemvalue="Native Application.check-am" />
       <item itemvalue="Native Application.check-recursive" />
+      <item itemvalue="Native Application.check" />
+      <item itemvalue="Native Application.clean-am" />
       <item itemvalue="Native Application.clean-cscope" />
       <item itemvalue="Native Application.clean-generic" />
       <item itemvalue="Native Application.clean-libtool" />
@@ -837,11 +835,10 @@
       <item itemvalue="Native Application.cscope" />
       <item itemvalue="Native Application.cscopelist-am" />
       <item itemvalue="Native Application.cscopelist-recursive" />
-      <item itemvalue="Native Application.CTAGS" />
-      <item itemvalue="Native Application.ctags" />
+      <item itemvalue="Native Application.cscopelist" />
       <item itemvalue="Native Application.ctags-am" />
       <item itemvalue="Native Application.ctags-recursive" />
-      <item itemvalue="Native Application.dist" />
+      <item itemvalue="Native Application.ctags" />
       <item itemvalue="Native Application.dist-all" />
       <item itemvalue="Native Application.dist-bzip2" />
       <item itemvalue="Native Application.dist-gzip" />
@@ -851,91 +848,82 @@
       <item itemvalue="Native Application.dist-xz" />
       <item itemvalue="Native Application.dist-zip" />
       <item itemvalue="Native Application.dist-zstd" />
+      <item itemvalue="Native Application.dist" />
       <item itemvalue="Native Application.distcheck" />
-      <item itemvalue="Native Application.distclean" />
+      <item itemvalue="Native Application.distclean-am" />
       <item itemvalue="Native Application.distclean-generic" />
       <item itemvalue="Native Application.distclean-hdr" />
       <item itemvalue="Native Application.distclean-libtool" />
       <item itemvalue="Native Application.distclean-recursive" />
       <item itemvalue="Native Application.distclean-tags" />
+      <item itemvalue="Native Application.distclean" />
       <item itemvalue="Native Application.distcleancheck" />
+      <item itemvalue="Native Application.distdir-am" />
       <item itemvalue="Native Application.distdir" />
       <item itemvalue="Native Application.distuninstallcheck" />
-      <item itemvalue="Native Application.dvi" />
       <item itemvalue="Native Application.dvi-am" />
       <item itemvalue="Native Application.dvi-recursive" />
-      <item itemvalue="Native Application.GTAGS" />
-      <item itemvalue="Native Application.html" />
+      <item itemvalue="Native Application.dvi" />
       <item itemvalue="Native Application.html-am" />
       <item itemvalue="Native Application.html-recursive" />
-      <item itemvalue="Native Application.info" />
+      <item itemvalue="Native Application.html" />
       <item itemvalue="Native Application.info-am" />
       <item itemvalue="Native Application.info-recursive" />
-      <item itemvalue="Native Application.install" />
+      <item itemvalue="Native Application.info" />
       <item itemvalue="Native Application.install-am" />
-      <item itemvalue="Native Application.install-data" />
       <item itemvalue="Native Application.install-data-am" />
       <item itemvalue="Native Application.install-data-recursive" />
-      <item itemvalue="Native Application.install-dvi" />
+      <item itemvalue="Native Application.install-data" />
       <item itemvalue="Native Application.install-dvi-am" />
       <item itemvalue="Native Application.install-dvi-recursive" />
-      <item itemvalue="Native Application.install-exec" />
+      <item itemvalue="Native Application.install-dvi" />
       <item itemvalue="Native Application.install-exec-am" />
       <item itemvalue="Native Application.install-exec-recursive" />
-      <item itemvalue="Native Application.install-html" />
+      <item itemvalue="Native Application.install-exec" />
       <item itemvalue="Native Application.install-html-am" />
       <item itemvalue="Native Application.install-html-recursive" />
-      <item itemvalue="Native Application.install-info" />
+      <item itemvalue="Native Application.install-html" />
       <item itemvalue="Native Application.install-info-am" />
       <item itemvalue="Native Application.install-info-recursive" />
+      <item itemvalue="Native Application.install-info" />
       <item itemvalue="Native Application.install-man" />
-      <item itemvalue="Native Application.install-pdf" />
       <item itemvalue="Native Application.install-pdf-am" />
       <item itemvalue="Native Application.install-pdf-recursive" />
-      <item itemvalue="Native Application.install-ps" />
+      <item itemvalue="Native Application.install-pdf" />
       <item itemvalue="Native Application.install-ps-am" />
       <item itemvalue="Native Application.install-ps-recursive" />
+      <item itemvalue="Native Application.install-ps" />
       <item itemvalue="Native Application.install-recursive" />
       <item itemvalue="Native Application.install-strip" />
-      <item itemvalue="Native Application.installcheck" />
+      <item itemvalue="Native Application.install" />
       <item itemvalue="Native Application.installcheck-am" />
       <item itemvalue="Native Application.installcheck-recursive" />
-      <item itemvalue="Native Application.installdirs" />
+      <item itemvalue="Native Application.installcheck" />
       <item itemvalue="Native Application.installdirs-am" />
       <item itemvalue="Native Application.installdirs-recursive" />
-      <item itemvalue="Native Application.maintainer-clean" />
+      <item itemvalue="Native Application.installdirs" />
+      <item itemvalue="Native Application.maintainer-clean-am" />
       <item itemvalue="Native Application.maintainer-clean-generic" />
       <item itemvalue="Native Application.maintainer-clean-recursive" />
-      <item itemvalue="Native Application.mostlyclean" />
+      <item itemvalue="Native Application.maintainer-clean" />
+      <item itemvalue="Native Application.mostlyclean-am" />
       <item itemvalue="Native Application.mostlyclean-generic" />
       <item itemvalue="Native Application.mostlyclean-libtool" />
       <item itemvalue="Native Application.mostlyclean-recursive" />
-      <item itemvalue="Native Application.pdf" />
+      <item itemvalue="Native Application.mostlyclean" />
       <item itemvalue="Native Application.pdf-am" />
       <item itemvalue="Native Application.pdf-recursive" />
-      <item itemvalue="Native Application.ps" />
+      <item itemvalue="Native Application.pdf" />
       <item itemvalue="Native Application.ps-am" />
       <item itemvalue="Native Application.ps-recursive" />
-      <item itemvalue="Native Application.TAGS" />
-      <item itemvalue="Native Application.tags" />
+      <item itemvalue="Native Application.ps" />
+      <item itemvalue="Native Application.stamp-h1" />
       <item itemvalue="Native Application.tags-am" />
       <item itemvalue="Native Application.tags-recursive" />
-      <item itemvalue="Native Application.uninstall" />
+      <item itemvalue="Native Application.tags" />
       <item itemvalue="Native Application.uninstall-am" />
       <item itemvalue="Native Application.uninstall-recursive" />
-      <item itemvalue="Native Application.clean-am" />
-      <item itemvalue="Native Application.CONTRIBUTING" />
-      <item itemvalue="Native Application.cscopelist" />
-      <item itemvalue="Native Application.distclean-am" />
-      <item itemvalue="Native Application.distdir-am" />
-      <item itemvalue="Native Application.Dockerfile" />
-      <item itemvalue="Native Application.ID" />
-      <item itemvalue="Native Application.LICENSE" />
-      <item itemvalue="Native Application.maintainer-clean-am" />
-      <item itemvalue="Native Application.mostlyclean-am" />
-      <item itemvalue="Native Application.NOTICE" />
-      <item itemvalue="Native Application.README" />
-      <item itemvalue="Native Application.stamp-h1" />
+      <item itemvalue="Native Application.uninstall" />
     </list>
   </component>
   <component name="SharedIndexes">
@@ -955,11 +943,30 @@
       <workItem from="1761161014400" duration="6866000" />
       <workItem from="1761304681176" duration="11620000" />
       <workItem from="1761322888792" duration="1456000" />
+      <workItem from="1761648656636" duration="6020000" />
+      <workItem from="1761751158818" duration="1929000" />
+      <workItem from="1761835257581" duration="598000" />
+      <workItem from="1762263691750" duration="3198000" />
+      <workItem from="1762497999949" duration="285000" />
+      <workItem from="1762498362067" duration="20000" />
+      <workItem from="1762498397141" duration="2637000" />
+      <workItem from="1762519954884" duration="598000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

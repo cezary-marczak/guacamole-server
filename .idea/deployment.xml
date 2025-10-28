@@ -2,13 +2,6 @@
 <project version="4">
   <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="Remote Host (7e686f81-0727-4e2b-a51f-7e5a94f77b36)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/tmp.GODnbi/guacamole-server" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
       <paths name="azure (7c61b69c-2cfe-4728-b248-a51533a4feec)">
         <serverdata>
           <mappings>
