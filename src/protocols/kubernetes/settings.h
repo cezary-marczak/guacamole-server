@@ -195,7 +195,7 @@ typedef struct guac_kubernetes_settings {
      * The path in which the screen recording should be saved, if enabled. If
      * no screen recording should be saved, this will be NULL.
      */
-    char* proxyServer;
+    char* recording_path;
 
     /**
      * The filename to use for the screen recording, if enabled.
