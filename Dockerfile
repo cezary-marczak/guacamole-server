@@ -415,6 +415,9 @@ TextOnly=FALSE\n\
 MaxTextLength=0\n\
 ' >> /opt/guacamole/config.ini
 
+RUN printf 'make -C FreeRDP/cmake-debug/ -j4 && make -C FreeRDP/cmake-debug \
+  install && make -C guacamole-server/ -j4 && make -C guacamole-server/ install' >> /opt/guacamole/build.sh
+
 # Checks the operating status every 5 minutes with a timeout of 5 seconds
 HEALTHCHECK --interval=5m --timeout=5s CMD nc -z 127.0.0.1 4822 || exit 1
 RUN mkdir -p /var/lib/procyon/ssl/kerberos /var/lib/procyon/recordings /var/lib/procyon/ssl/share

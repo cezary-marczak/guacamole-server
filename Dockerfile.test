@@ -371,7 +371,9 @@ ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
 ENV PKG_CONFIG_PATH=${PREFIX_DIR}/lib/pkgconfig
 ENV GUACD_LOG_LEVEL=debug
 ENV WLOG_LEVEL=DEBUG
-ENV WLOG_PREFIX='%fl:%ln[%hr:%mi:%se:%ml] [%pid:%tid][%lv]: '
+ENV WLOG_PREFIX3='%fl:%ln[%hr:%mi:%se:%ml] [%pid:%tid][%lv]: '
+
+ARG BUILD_DIR=/opt/guacamole/guacamole-server
 
 # Copy build artifacts into this stage
 COPY --from=builder ${PREFIX_DIR} ${PREFIX_DIR}

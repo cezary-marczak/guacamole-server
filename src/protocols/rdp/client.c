@@ -860,12 +860,12 @@ int guac_rdp_proxy_connect(guac_client *client, int fd) {
     }
     guac_client_log(client, GUAC_LOG_INFO, "Proxy created");
 
-    int received = (client, fd, proxy_srv);
-    if (received == 0) {
+    ret = read_guac_init(client, fd, proxy_srv);
+    if (ret == 0) {
         guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, connection closed");
         goto cleanup;
     }
-    if (received < 0) {
+    if (ret < 0) {
         guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, ERRORED");
         goto cleanup;
     }
