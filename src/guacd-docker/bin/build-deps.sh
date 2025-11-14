@@ -100,7 +100,10 @@ install_from_git() {
     if [ -e CMakeLists.txt ]; then
         cmake -DCMAKE_INSTALL_PREFIX="$PREFIX_DIR" -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
           -B cmake-build "$@" .
-        cmake --build cmake-build -j4 || cmake --build cmake-build
+
+        if ! cmake --build cmake-build -j4 || cmake --build cmake-build; then
+          echo "BUILD $REPO_DIR FAILED" >2;
+        fi
         cmake --install cmake-build
     else
         [ -e configure ] || autoreconf -fi

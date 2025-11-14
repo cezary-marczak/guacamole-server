@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="bashsupport-pro.project">
+    <scriptLibraries>
+      <library name="Library 1">
+        <sources>
+          <source path="$USER_HOME$/deploy.sh" external="true" />
+          <source path="$USER_HOME$/.fzf.bash" external="true" />
+        </sources>
+        <targets>
+          <target path="$USER_HOME$" recursive="true" />
+        </targets>
+      </library>
+    </scriptLibraries>
+    <option name="defaultFileTemplate" value="Zsh" />
+  </component>
+</project>

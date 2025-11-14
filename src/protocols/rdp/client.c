@@ -180,7 +180,6 @@ int guac_client_init(guac_client *client, int argc, char **argv) {
 #endif
 
     return 0;
-
 }
 
 int guac_rdp_client_free_handler(guac_client *client) {
@@ -264,35 +263,35 @@ int guac_rdp_client_free_handler(guac_client *client) {
 #include <sys/socket.h>
 #include <errno.h>
 
-static void string_hexdump(const BYTE* data, size_t length)
-{
-    const BYTE* p = data;
-    size_t i, line, offset = 0;
-
-    while (offset < length)
-    {
-        printf("%04" PRIxz " ", offset);
-
-        line = length - offset;
-
-        if (line > 16)
-            line = 16;
-
-        for (i = 0; i < line; i++)
-            printf("%02" PRIx8 " ", p[i]);
-
-        for (; i < 16; i++)
-            printf("   ");
-
-        for (i = 0; i < line; i++)
-            printf("%c", (p[i] >= 0x20 && p[i] < 0x7F) ? (char)p[i] : '.');
-
-        printf("\n");
-
-        offset += line;
-        p += line;
-    }
-}
+// static void string_hexdump(const BYTE* data, size_t length)
+// {
+//     const BYTE* p = data;
+//     size_t i, line, offset = 0;
+//
+//     while (offset < length)
+//     {
+//         printf("%04" PRIxz " ", offset);
+//
+//         line = length - offset;
+//
+//         if (line > 16)
+//             line = 16;
+//
+//         for (i = 0; i < line; i++)
+//             printf("%02" PRIx8 " ", p[i]);
+//
+//         for (; i < 16; i++)
+//             printf("   ");
+//
+//         for (i = 0; i < line; i++)
+//             printf("%c", (p[i] >= 0x20 && p[i] < 0x7F) ? (char)p[i] : '.');
+//
+//         printf("\n");
+//
+//         offset += line;
+//         p += line;
+//     }
+// }
 
 static const char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
@@ -365,229 +364,53 @@ static char* crypto_base64_encode(const BYTE* data, int in_length, size_t* out_l
     return ret;
 }
 
-BOOL array_cmp_str(const void* objA, const void* objB) {
-    return strcmp(objA, objB) == 0;
-}
+// BOOL array_cmp_str(const void* objA, const void* objB) {
+//     return strcmp(objA, objB) == 0;
+// }
 
-long read_n_bytes(int sockfd, void* buffer, size_t n)
-{
-    ssize_t bytes_read = 0;
-    char* buf_ptr = buffer;
+// long read_n_bytes(int sockfd, void* buffer, size_t n)
+// {
+//     ssize_t bytes_read = 0;
+//     char* buf_ptr = buffer;
+//
+//     while (bytes_read < n) {
+//         ssize_t ret = recv(sockfd, buf_ptr + bytes_read, n - bytes_read, 0);
+//
+//         // Check for errors or connection closure
+//         if (ret == 0) {
+//             // The peer closed the connection (EOF)
+//             return 0;
+//         } else if (ret < 0) {
+//             // If interrupted by a signal, just retry
+//             if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+//                 continue;
+//             // Otherwise, it's a real error
+//             return -1;
+//         }
+//
+//         bytes_read += ret;
+//     }
+//
+//     // On success, we have read exactly n bytes
+//     return bytes_read;
+// }
 
-    while (bytes_read < n) {
-        ssize_t ret = recv(sockfd, buf_ptr + bytes_read, n - bytes_read, 0);
-
-        // Check for errors or connection closure
-        if (ret == 0) {
-            // The peer closed the connection (EOF)
-            return 0;
-        } else if (ret < 0) {
-            // If interrupted by a signal, just retry
-            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-                continue;
-            // Otherwise, it's a real error
-            return -1;
-        }
-
-        bytes_read += ret;
-    }
-
-    // On success, we have read exactly n bytes
-    return bytes_read;
-}
-
-static char* read_null_terminated_str(guac_client* client, wStream* s) {
-    BYTE* str = NULL;
-    size_t len;
-    size_t remain = Stream_GetRemainingLength(s);
-    str = Stream_Pointer(s);
-
-    if ((len = strnlen((char*)str, remain)) == remain)
-    {
-        guac_client_log(client, GUAC_LOG_ERROR, "Invalid init packet, no NULL byte found");
-        return NULL;
-    }
-    char* ret = strndup((char*)str, len);
-
-    Stream_Seek(s, len+1);
-    return ret;
-}
-
-static int read_guac_init(guac_client* client, int sockfd, proxyServer* proxy_srv)
-{
-    int flags = fcntl(sockfd, F_GETFL, 0);
-    if (flags < 0) {
-        perror("fcntl(F_GETFL) failed");
-        return -1;
-    }
-
-    guac_client_log(client, GUAC_LOG_INFO, "Socket flags: 0x%08x", flags);
-
-    int new_flags = flags;
-
-    // Clear the O_NONBLOCK bit to make the socket blocking
-    new_flags &= ~O_NONBLOCK;
-    if (fcntl(sockfd, F_SETFL, new_flags) < 0) {
-        perror("fcntl(F_SETFL) failed");
-        return -1;
-    }
-
-    guac_client_log(client, GUAC_LOG_INFO, "Set new flags", new_flags);
-
-    BYTE b[4096];
-    int read = 0;
-    int n = read_n_bytes(sockfd, b, 2);
-    if (n <= 0)
-        return n;
-    if (n != 2)
-        return -1;
-
-    uint16_t totalLen = (((uint16_t)(*b)) << 8) + (uint16_t)(*(b + 1));
-    read += sizeof(uint16_t);
-
-    guac_client_log(client, GUAC_LOG_INFO, "Init pkt size: %d, reading another %d", totalLen, totalLen-2);
-
-    n = read_n_bytes(sockfd, b + read, totalLen - read);
-    if (n <= 0)
-        return n;
-    if (n != totalLen - read)
-        return -1;
-
-    guac_client_log(client, GUAC_LOG_INFO, "SUCCESS!!!");
-    string_hexdump(b, totalLen);
-
-    if (fcntl(sockfd, F_SETFL, flags) < 0) {
-        perror("fcntl(F_SETFL) failed");
-        return -1;
-    }
-
-    wStream* s = Stream_New(b+2, totalLen-2);
-
-    int ret = -1;
-
-    char* auth_filename = NULL;
-    char* conn_name = NULL, *recording_path = NULL, *recording_name = NULL;
-    wArrayList* allowed_principals = ArrayList_New(FALSE);
-    allowed_principals->object.fnObjectEquals = array_cmp_str;
-
-    // NEW: Read auth filename (first field) - points to file in /var/lib/guacamole/share/
-    auth_filename = read_null_terminated_str(client, s);
-    if (auth_filename == NULL) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read auth filename from init packet");
-        goto cleanup;
-    }
-    guac_client_log(client, GUAC_LOG_INFO, "auth_filename: %s", auth_filename);
-
-    if (Stream_GetRemainingLength(s) == 0) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Only auth filename in init packet");
-        goto cleanup;
-    }
-
-    // NEW: Load auth data from file
-    char auth_filepath[PATH_MAX];
-    snprintf(auth_filepath, sizeof(auth_filepath), "/var/lib/guacamole/share/%s", auth_filename);
-
-    FILE* auth_file = fopen(auth_filepath, "r");
-    if (auth_file == NULL) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to open auth file: %s", auth_filepath);
-        goto cleanup;
-    }
-
-    // Read procyonConn (first line) - connection name with <principal> placeholder
-    char procyonConn_line[512];
-    if (fgets(procyonConn_line, sizeof(procyonConn_line), auth_file) == NULL) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read procyonConn from auth file");
-        fclose(auth_file);
-        goto cleanup;
-    }
-    procyonConn_line[strcspn(procyonConn_line, "\n")] = 0;
-    conn_name = strdup(procyonConn_line);
-    guac_client_log(client, GUAC_LOG_INFO, "procyonConn from auth file: %s", conn_name);
-
-    // Read recPath (second line) - recording path
-    char recPath_line[PATH_MAX];
-    if (fgets(recPath_line, sizeof(recPath_line), auth_file) == NULL) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read recPath from auth file");
-        fclose(auth_file);
-        goto cleanup;
-    }
-    recPath_line[strcspn(recPath_line, "\n")] = 0;
-    recording_path = strdup(recPath_line);
-    guac_client_log(client, GUAC_LOG_INFO, "recPath from auth file: %s", recording_path);
-
-    // Read recName (third line) - recording name
-    char recName_line[PATH_MAX];
-    if (fgets(recName_line, sizeof(recName_line), auth_file) == NULL) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read recName from auth file");
-        fclose(auth_file);
-        goto cleanup;
-    }
-    recName_line[strcspn(recName_line, "\n")] = 0;
-    recording_name = strdup(recName_line);
-    guac_client_log(client, GUAC_LOG_INFO, "recName from auth file: %s", recording_name);
-
-    // Read allowed principals (remaining lines)
-    char principal_line[256];
-    while (fgets(principal_line, sizeof(principal_line), auth_file) != NULL) {
-        principal_line[strcspn(principal_line, "\n")] = 0;
-        if (strlen(principal_line) > 0) {
-            char* principal = strdup(principal_line);
-            ArrayList_Add(allowed_principals, principal);
-            guac_client_log(client, GUAC_LOG_DEBUG, "allowed principal: %s", principal);
-        }
-    }
-    fclose(auth_file);
-
-    guac_client_log(client, GUAC_LOG_INFO, "Loaded %zu allowed principals from auth file",
-                    ArrayList_Count(allowed_principals));
-
-    // All data loaded from auth file - init packet now only contains the auth filename
-    // Store allowed principals from file
-    proxy_srv->allowed_principals = allowed_principals;
-    proxy_srv->session_token = auth_filename; // Store auth filename as session token
-
-    const char* skip_recording = "skip";
-    if (strcmp(conn_name, skip_recording) == 0 ||
-        strcmp(recording_path, skip_recording) == 0 ||
-        strcmp(recording_name, skip_recording) == 0) {
-
-        guac_client_log(client, GUAC_LOG_INFO, "Skipping recording");
-        free(conn_name);
-        free(recording_path);
-        free(recording_name);
-        ret = 1;
-        goto cleanup;
-    }
-
-    guac_rdp_client* rdp_client = client->data;
-    if (rdp_client == NULL) {
-        ret = -1;
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to get client RDP data");
-        goto cleanup;
-    }
-    // Store auth data loaded from file in proxy_srv
-    proxy_srv->session_token = auth_filename; // Store filename for reference
-    proxy_srv->conn_name = conn_name;
-    rdp_client->settings->recording_path = recording_path;
-    rdp_client->settings->recording_name = recording_name;
-
-cleanup:
-    Stream_Free(s, FALSE);
-    if (ret <= 0) {
-        free(auth_filename);
-        free(conn_name);
-        free(recording_path);
-        free(recording_name);
-        // free the strings
-        size_t count = ArrayList_Count(allowed_principals);
-        for (size_t i = 0; i < count; i++)
-        {
-            char* str = ArrayList_GetItem(allowed_principals, i);
-            free(str);
-        }
-    }
-    return ret;
-}
+// static char* read_null_terminated_str(guac_client* client, wStream* s) {
+//     BYTE* str = NULL;
+//     size_t len;
+//     size_t remain = Stream_GetRemainingLength(s);
+//     str = Stream_Pointer(s);
+//
+//     if ((len = strnlen((char*)str, remain)) == remain)
+//     {
+//         guac_client_log(client, GUAC_LOG_ERROR, "Invalid init packet, no NULL byte found");
+//         return NULL;
+//     }
+//     char* ret = strndup((char*)str, len);
+//
+//     Stream_Seek(s, len+1);
+//     return ret;
+// }
 
 int start_recording(const proxyServer* proxy_srv, const char* principal) {
     char* conn_name_base64 = NULL;
@@ -719,6 +542,125 @@ int start_recording(const proxyServer* proxy_srv, const char* principal) {
 
     return 1;
 }
+
+int read_guac_init(void* cl, const char* auth_filename, void* srv)
+{
+    guac_client* client = cl;
+    guac_client_log(client, GUAC_LOG_INFO,"auth filename %p\n", auth_filename);
+    proxyServer* proxy_srv = srv;
+    // BYTE b[4096];
+    // int read = 0;
+    int ret = -1;
+    char* conn_name = NULL;
+    char* recording_path = NULL;
+    char* recording_name = NULL;
+    wArrayList* allowed_principals = ArrayList_New(FALSE);
+
+    // NEW: Load auth data from file
+    char auth_filepath[PATH_MAX];
+    // snprintf(auth_filepath, sizeof(auth_filepath), "/var/lib/guacamole/share/%s", auth_filename);
+    snprintf(auth_filepath, sizeof(auth_filepath), "/opt/guacamole/procyon-i-010e5b5e7be64d5f6.rdp.procyon.ai");
+
+    FILE* auth_file = fopen(auth_filepath, "r");
+    if (auth_file == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to open auth file: %s", auth_filepath);
+        goto cleanup;
+    }
+
+    // Read procyonConn (first line) - connection name with <principal> placeholder
+    char procyonConn_line[512];
+    if (fgets(procyonConn_line, sizeof(procyonConn_line), auth_file) == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read procyonConn from auth file");
+        fclose(auth_file);
+        goto cleanup;
+    }
+    procyonConn_line[strcspn(procyonConn_line, "\n")] = 0;
+    conn_name = strdup(procyonConn_line);
+    guac_client_log(client, GUAC_LOG_INFO, "procyonConn from auth file: %s", conn_name);
+
+    // Read recPath (second line) - recording path
+    char recPath_line[PATH_MAX];
+    if (fgets(recPath_line, sizeof(recPath_line), auth_file) == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read recPath from auth file");
+        fclose(auth_file);
+        goto cleanup;
+    }
+    recPath_line[strcspn(recPath_line, "\n")] = 0;
+    recording_path = strdup(recPath_line);
+    guac_client_log(client, GUAC_LOG_INFO, "recPath from auth file: %s", recording_path);
+
+    // Read recName (third line) - recording name
+    char recName_line[PATH_MAX];
+    if (fgets(recName_line, sizeof(recName_line), auth_file) == NULL) {
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read recName from auth file");
+        fclose(auth_file);
+        goto cleanup;
+    }
+    recName_line[strcspn(recName_line, "\n")] = 0;
+    recording_name = strdup(recName_line);
+    guac_client_log(client, GUAC_LOG_INFO, "recName from auth file: %s", recording_name);
+
+    // Read allowed principals (remaining lines)
+    char principal_line[256];
+    while (fgets(principal_line, sizeof(principal_line), auth_file) != NULL) {
+        principal_line[strcspn(principal_line, "\n")] = 0;
+        if (strlen(principal_line) > 0) {
+            char* principal = strdup(principal_line);
+            ArrayList_Add(allowed_principals, principal);
+            guac_client_log(client, GUAC_LOG_DEBUG, "allowed principal: %s", principal);
+        }
+    }
+    fclose(auth_file);
+
+    guac_client_log(client, GUAC_LOG_INFO, "Loaded %zu allowed principals from auth file",
+                    ArrayList_Count(allowed_principals));
+
+    // All data loaded from auth file - init packet now only contains the auth filename
+    // Store allowed principals from file
+    proxy_srv->allowed_principals = allowed_principals;
+    proxy_srv->session_token = auth_filename; // Store auth filename as session token
+
+    const char* skip_recording = "skip";
+    if (strcmp(conn_name, skip_recording) == 0 ||
+        strcmp(recording_path, skip_recording) == 0 ||
+        strcmp(recording_name, skip_recording) == 0) {
+
+        guac_client_log(client, GUAC_LOG_INFO, "Skipping recording");
+        free(conn_name);
+        free(recording_path);
+        free(recording_name);
+        ret = 1;
+        goto cleanup;
+    }
+
+    guac_rdp_client* rdp_client = client->data;
+    if (rdp_client == NULL) {
+        ret = -1;
+        guac_client_log(client, GUAC_LOG_ERROR, "Failed to get client RDP data");
+        goto cleanup;
+    }
+    // Store auth data loaded from file in proxy_srv
+    proxy_srv->session_token = auth_filename; // Store filename for reference
+    proxy_srv->conn_name = conn_name;
+    rdp_client->settings->recording_path = recording_path;
+    rdp_client->settings->recording_name = recording_name;
+
+cleanup:
+    if (ret <= 0) {
+        free(conn_name);
+        free(recording_path);
+        free(recording_name);
+        // free the strings
+        size_t count = ArrayList_Count(allowed_principals);
+        for (size_t i = 0; i < count; i++)
+        {
+            char* str = ArrayList_GetItem(allowed_principals, i);
+            free(str);
+        }
+    }
+    return ret;
+}
+
 
 int guac_rdp_proxy_connect(guac_client *client, int fd) {
 
@@ -860,15 +802,15 @@ int guac_rdp_proxy_connect(guac_client *client, int fd) {
     }
     guac_client_log(client, GUAC_LOG_INFO, "Proxy created");
 
-    ret = read_guac_init(client, fd, proxy_srv);
-    if (ret == 0) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, connection closed");
-        goto cleanup;
-    }
-    if (ret < 0) {
-        guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, ERRORED");
-        goto cleanup;
-    }
+    // ret = read_guac_init(client, fd, proxy_srv);
+    // if (ret == 0) {
+    //     guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, connection closed");
+    //     goto cleanup;
+    // }
+    // if (ret < 0) {
+    //     guac_client_log(client, GUAC_LOG_ERROR, "Failed to read init, ERRORED");
+    //     goto cleanup;
+    // }
 
     proxy_srv->guacamole_client = client;
     proxy_srv->pointer = pointer;
@@ -877,6 +819,7 @@ int guac_rdp_proxy_connect(guac_client *client, int fd) {
     proxy_srv->additional_update = additional_update;
     proxy_srv->is_native = TRUE;
     proxy_srv->start_recording = start_recording;
+    proxy_srv->read_guac_init = read_guac_init;
 
     ret = pf_server_start_with_peer_socket(proxy_srv, fd);
     if (!ret) {

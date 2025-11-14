@@ -40,6 +40,15 @@ AC_PROG_LIBTOOL
 # Headers
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/socket.h time.h sys/time.h syslog.h unistd.h cairo/cairo.h pngstruct.h])
 
+# Check for execinfo.h and backtrace() for stack trace support
+AC_CHECK_HEADERS([execinfo.h])
+AC_SEARCH_LIBS([backtrace], [execinfo],
+    [AC_DEFINE([HAVE_BACKTRACE], [1], [Define if backtrace is available])
+     if test "$ac_cv_search_backtrace" != "none required"; then
+         EXECINFO_LIBS="$ac_cv_search_backtrace"
+     fi],
+    [AC_MSG_WARN([backtrace support not available - stack traces will be disabled])])
+
 # Source characteristics
 AC_DEFINE([_XOPEN_SOURCE], [700], [Uses X/Open and POSIX APIs])
 AC_DEFINE([__BSD_VISIBLE], [1], [Uses BSD-specific APIs (if available)])
@@ -131,6 +140,7 @@ AC_SUBST(CAIRO_LIBS)
 AC_SUBST(PTHREAD_LIBS)
 AC_SUBST(UUID_LIBS)
 AC_SUBST(CUNIT_LIBS)
+AC_SUBST(EXECINFO_LIBS)
 
 # Library functions
 AC_CHECK_FUNCS([clock_gettime gettimeofday memmove memset select strdup nanosleep])

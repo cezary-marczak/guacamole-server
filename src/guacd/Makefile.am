@@ -55,6 +55,9 @@ guacd_SOURCES =  \
 
 guacd_CFLAGS =              \
     -Werror -Wall  \
+    -fno-omit-frame-pointer \
+    -fasynchronous-unwind-tables \
+    -g \
     @COMMON_INCLUDE@        \
     @LIBGUAC_INCLUDE@         \
      @RDP_CFLAGS@
@@ -63,10 +66,11 @@ guacd_LDADD =        \
     @COMMON_LTLIB@   \
     @LIBGUAC_LTLIB@
 
-guacd_LDFLAGS =    \
-    @PTHREAD_LIBS@ \
-    @SSL_LIBS@            \
-  @RDP_LIBS@
+guacd_LDFLAGS =      \
+    @PTHREAD_LIBS@   \
+    @SSL_LIBS@       \
+    @RDP_LIBS@       \
+    @EXECINFO_LIBS@
 
 EXTRA_DIST =            \
     init.d/guacd.in          \

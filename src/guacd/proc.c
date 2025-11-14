@@ -44,6 +44,10 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+
 /**
  * Parameters for the user thread.
  */
@@ -458,11 +462,189 @@ guacd_proc* guacd_create_proc(const char* protocol) {
     return proc;
 }
 
+#ifdef HAVE_EXECINFO_H
+/**
+ * Maximum number of stack frames to capture in backtrace.
+ */
+#define MAX_BACKTRACE_FRAMES 128
+#endif
+
+/**
+ * Signal handler for capturing stack traces on crashes.
+ * This handler will log a backtrace and signal information before terminating.
+ *
+ * @param signum
+ *     The signal number that triggered this handler.
+ *
+ * @param info
+ *     Signal information structure (may be NULL if not available).
+ *
+ * @param context
+ *     Signal context (unused but required by sigaction).
+ */
+static void guacd_crash_handler(int signum, siginfo_t* info, void* context) {
+
+    const char* signal_name;
+
+    /* Map signal number to human-readable name */
+    switch (signum) {
+        case SIGSEGV: signal_name = "SIGSEGV (Segmentation fault)"; break;
+        case SIGABRT: signal_name = "SIGABRT (Abort)"; break;
+        case SIGBUS:  signal_name = "SIGBUS (Bus error)"; break;
+        case SIGILL:  signal_name = "SIGILL (Illegal instruction)"; break;
+        case SIGFPE:  signal_name = "SIGFPE (Floating point exception)"; break;
+        default:      signal_name = "Unknown signal"; break;
+    }
+
+    /* Log crash header with signal information */
+    guacd_log(GUAC_LOG_ERROR,
+            "========================================");
+    guacd_log(GUAC_LOG_ERROR,
+            "FATAL: Child process crashed with signal %d: %s",
+            signum, signal_name);
+
+    /* Log additional signal information if available */
+    if (info != NULL) {
+        guacd_log(GUAC_LOG_ERROR,
+                "Signal code: %d, Fault address: %p, PID: %d",
+                info->si_code, info->si_addr, getpid());
+    }
+
+#ifdef HAVE_EXECINFO_H
+    /* Capture and log backtrace if available */
+    void* trace[MAX_BACKTRACE_FRAMES];
+    int trace_size = backtrace(trace, MAX_BACKTRACE_FRAMES);
+
+    guacd_log(GUAC_LOG_ERROR,
+            "Stack trace (%d frames):", trace_size);
+
+    /* Use backtrace_symbols_fd to write directly to stderr
+     * This is safer than backtrace_symbols() as it doesn't use malloc */
+    backtrace_symbols_fd(trace, trace_size, STDERR_FILENO);
+#else
+    guacd_log(GUAC_LOG_ERROR,
+            "Stack trace: Not available (execinfo.h not found during build)");
+    guacd_log(GUAC_LOG_ERROR,
+            "To enable stack traces: Install libexecinfo-dev and rebuild");
+    guacd_log(GUAC_LOG_ERROR,
+            "  Alpine Linux: apk add libexecinfo-dev libexecinfo");
+    guacd_log(GUAC_LOG_ERROR,
+            "Or analyze core dump with: gdb /path/to/guacd core.<pid>");
+#endif
+
+    guacd_log(GUAC_LOG_ERROR,
+            "========================================");
+
+    /* Re-raise signal with default handler to generate core dump if enabled */
+    signal(signum, SIG_DFL);
+    raise(signum);
+}
+
+/**
+ * Installs signal handlers to capture stack traces on crashes.
+ * Should be called early in the child process initialization.
+ *
+ * @return
+ *     Zero on success, non-zero if signal handler installation failed.
+ */
+static int guacd_install_crash_handlers(void) {
+
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+
+    /* Use SA_SIGINFO to get extended signal information */
+    sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+    sa.sa_sigaction = guacd_crash_handler;
+    sigemptyset(&sa.sa_mask);
+
+    /* Install handlers for common crash signals */
+    if (sigaction(SIGSEGV, &sa, NULL) != 0) {
+        guacd_log(GUAC_LOG_WARNING,
+                "Failed to install SIGSEGV handler: %s", strerror(errno));
+        return 1;
+    }
+
+    if (sigaction(SIGABRT, &sa, NULL) != 0) {
+        guacd_log(GUAC_LOG_WARNING,
+                "Failed to install SIGABRT handler: %s", strerror(errno));
+        return 1;
+    }
+
+    if (sigaction(SIGBUS, &sa, NULL) != 0) {
+        guacd_log(GUAC_LOG_WARNING,
+                "Failed to install SIGBUS handler: %s", strerror(errno));
+        return 1;
+    }
+
+    if (sigaction(SIGILL, &sa, NULL) != 0) {
+        guacd_log(GUAC_LOG_WARNING,
+                "Failed to install SIGILL handler: %s", strerror(errno));
+        return 1;
+    }
+
+    if (sigaction(SIGFPE, &sa, NULL) != 0) {
+        guacd_log(GUAC_LOG_WARNING,
+                "Failed to install SIGFPE handler: %s", strerror(errno));
+        return 1;
+    }
+
+#ifdef HAVE_EXECINFO_H
+    guacd_log(GUAC_LOG_DEBUG,
+            "Crash signal handlers installed successfully (with backtrace support)");
+#else
+    guacd_log(GUAC_LOG_DEBUG,
+            "Crash signal handlers installed (without backtrace - execinfo.h not available)");
+    guacd_log(GUAC_LOG_DEBUG,
+            "Stack traces disabled. To enable: Install libexecinfo-dev and rebuild");
+#endif
+
+    return 0;
+}
+
+/**
+ * Returns a human-readable name for a given signal number.
+ *
+ * @param signum
+ *     The signal number.
+ *
+ * @return
+ *     A string describing the signal, or "Unknown signal" if not recognized.
+ */
+static const char* guacd_get_signal_name(int signum) {
+    switch (signum) {
+        case SIGHUP:    return "SIGHUP (Hangup)";
+        case SIGINT:    return "SIGINT (Interrupt)";
+        case SIGQUIT:   return "SIGQUIT (Quit)";
+        case SIGILL:    return "SIGILL (Illegal instruction)";
+        case SIGTRAP:   return "SIGTRAP (Trace/breakpoint trap)";
+        case SIGABRT:   return "SIGABRT (Abort)";
+        case SIGBUS:    return "SIGBUS (Bus error)";
+        case SIGFPE:    return "SIGFPE (Floating point exception)";
+        case SIGKILL:   return "SIGKILL (Killed)";
+        case SIGSEGV:   return "SIGSEGV (Segmentation fault)";
+        case SIGPIPE:   return "SIGPIPE (Broken pipe)";
+        case SIGALRM:   return "SIGALRM (Alarm clock)";
+        case SIGTERM:   return "SIGTERM (Terminated)";
+        default:        return "Unknown signal";
+    }
+}
+
 void guacd_exec_proc_native(guacd_proc* proc, int client_fd)
 {
+    guacd_log(GUAC_LOG_DEBUG,
+            "[CHILD-INIT] Child process started, PID=%d", getpid());
+
+    /* Install crash signal handlers for stack trace capture */
+    if (guacd_install_crash_handlers() != 0) {
+        guacd_log(GUAC_LOG_WARNING,
+                "[CHILD-INIT] Failed to install crash handlers, continuing anyway");
+    }
+
     /* Set process group ID to match PID */
+    guacd_log(GUAC_LOG_DEBUG, "[CHILD-INIT] Setting process group ID");
     if (setpgid(0, 0)) {
-        guacd_log(GUAC_LOG_ERROR, "Cannot set PGID for connection process: %s",
+        guacd_log(GUAC_LOG_ERROR,
+                "[CHILD-INIT] Cannot set PGID for connection process: %s",
                 strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -480,22 +662,27 @@ void guacd_exec_proc_native(guacd_proc* proc, int client_fd)
         void* obj;
     } alias;
 
-    guacd_log(GUAC_LOG_INFO, "Loading client plugin: %s", protocol_lib);
+    guacd_log(GUAC_LOG_INFO, "[PLUGIN-LOAD] Loading client plugin: %s", protocol_lib);
 
     /* Load client plugin */
+    guacd_log(GUAC_LOG_DEBUG, "[PLUGIN-LOAD] Calling dlopen() for RDP plugin");
     client_plugin_handle = dlopen(protocol_lib, RTLD_LAZY);
     if (!client_plugin_handle) {
         guac_error = GUAC_STATUS_NOT_FOUND;
         guac_error_message = dlerror();
-        guacd_log(GUAC_LOG_ERROR, "Unable to load client plugin \"%s\": %d, %s",
+        guacd_log(GUAC_LOG_ERROR,
+                "[PLUGIN-LOAD] Unable to load client plugin \"%s\": %d, %s",
                 protocol_lib, guac_error, guac_error_message);
+        guacd_log(GUAC_LOG_ERROR,
+                "[PLUGIN-LOAD] Check that the RDP plugin is installed and library path is correct");
         sleep(2);
         exit(EXIT_FAILURE);
     }
+    guacd_log(GUAC_LOG_DEBUG, "[PLUGIN-LOAD] Successfully opened plugin library");
 
     dlerror(); /* Clear errors */
 
-    guacd_log(GUAC_LOG_INFO, "Loading guac_rdp_proxy_connect");
+    guacd_log(GUAC_LOG_INFO, "[PLUGIN-LOAD] Looking up guac_rdp_proxy_connect symbol");
 
     /* Get init function */
     alias.obj = dlsym(client_plugin_handle, "guac_rdp_proxy_connect");
@@ -504,20 +691,32 @@ void guacd_exec_proc_native(guacd_proc* proc, int client_fd)
     if (dlerror() != NULL) {
         guac_error = GUAC_STATUS_INTERNAL_ERROR;
         guac_error_message = dlerror();
+        guacd_log(GUAC_LOG_ERROR,
+                "[PLUGIN-LOAD] Symbol 'guac_rdp_proxy_connect' not found: %s",
+                guac_error_message);
         dlclose(client_plugin_handle);
         exit(EXIT_FAILURE);
     }
+    guacd_log(GUAC_LOG_DEBUG, "[PLUGIN-LOAD] Symbol resolved successfully");
 
     /* Init client */
     proc->client->__plugin_handle = client_plugin_handle;
 
-    guacd_log(GUAC_LOG_INFO, "Loaded guac_rdp_proxy_connect, running now...");
+    guacd_log(GUAC_LOG_INFO, "[CONNECTION] Starting RDP proxy connection handler");
+    guacd_log(GUAC_LOG_DEBUG, "[CONNECTION] Client FD=%d, Process PID=%d", client_fd, getpid());
 
     int ret = alias.proxy_connect(proc->client, client_fd);
     if (ret) {
-        guacd_log(GUAC_LOG_ERROR, "guac_rdp_proxy_connect failed");
+        guacd_log(GUAC_LOG_ERROR,
+                "[CONNECTION] guac_rdp_proxy_connect failed with return code: %d", ret);
+        guacd_log(GUAC_LOG_ERROR,
+                "[CONNECTION] Connection handler terminated abnormally");
+    } else {
+        guacd_log(GUAC_LOG_INFO,
+                "[CONNECTION] guac_rdp_proxy_connect completed successfully");
     }
 
+    guacd_log(GUAC_LOG_DEBUG, "[CHILD-EXIT] Child process exiting with code: %d", ret);
     exit(ret);
 }
 
@@ -526,6 +725,7 @@ void guacd_create_proc_native(guac_client* client, int client_fd) {
     /* Allocate process */
     guacd_proc* proc = calloc(1, sizeof(guacd_proc));
     if (proc == NULL) {
+        guacd_log(GUAC_LOG_ERROR, "[PARENT] Failed to allocate memory for process structure");
         return;
     }
     proc->fd_socket = -1;
@@ -534,39 +734,111 @@ void guacd_create_proc_native(guac_client* client, int client_fd) {
     /* Fork */
     proc->pid = fork();
     if (proc->pid < 0) {
-        guacd_log(GUAC_LOG_ERROR, "Cannot fork child process: %s", strerror(errno));
+        guacd_log(GUAC_LOG_ERROR, "[PARENT] Cannot fork child process: %s", strerror(errno));
         guac_client_free(proc->client);
         free(proc);
         return;
     }
+
     /* Child */
     if (proc->pid == 0) {
         guacd_exec_proc_native(proc, client_fd);
     }
 
     /* Parent, waiting for the child process */
+    guacd_log(GUAC_LOG_DEBUG, "[PARENT] Waiting for child process PID=%d", proc->pid);
+
     int status;
     const int wpid = waitpid(proc->pid, &status, 0);
+
     if (wpid == -1) {
-        guacd_log(GUAC_LOG_INFO, "child process finished: %d", proc->pid);
+        guacd_log(GUAC_LOG_ERROR,
+                "[PARENT] waitpid() failed for child PID=%d: %s",
+                proc->pid, strerror(errno));
         goto proc_cleanup;
     }
 
+    /* Analyze child process termination status */
     if (WIFEXITED(status)) {
-        guacd_log(GUAC_LOG_ERROR, "child exited, status=%d", WEXITSTATUS(status));
+        int exit_code = WEXITSTATUS(status);
+        if (exit_code == 0) {
+            guacd_log(GUAC_LOG_INFO,
+                    "[PARENT] Child process PID=%d exited successfully (code 0)",
+                    proc->pid);
+        } else {
+            guacd_log(GUAC_LOG_ERROR,
+                    "[PARENT] Child process PID=%d exited with error code %d",
+                    proc->pid, exit_code);
+            guacd_log(GUAC_LOG_ERROR,
+                    "[PARENT] Check child process logs above for detailed error information");
+        }
     } else if (WIFSIGNALED(status)) {
-        guacd_log(GUAC_LOG_ERROR, "child killed (signal %d)", WTERMSIG(status));
+        int signum = WTERMSIG(status);
+        const char* signal_name = guacd_get_signal_name(signum);
+
+        guacd_log(GUAC_LOG_ERROR,
+                "========================================");
+        guacd_log(GUAC_LOG_ERROR,
+                "[PARENT] Child process PID=%d terminated by signal %d: %s",
+                proc->pid, signum, signal_name);
+
 #ifdef WCOREDUMP
-        if (WCOREDUMP(status))
-            guacd_log(GUAC_LOG_ERROR, "child dumped core");
+        if (WCOREDUMP(status)) {
+            guacd_log(GUAC_LOG_ERROR,
+                    "[PARENT] Core dump was generated");
+            guacd_log(GUAC_LOG_ERROR,
+                    "[PARENT] Analyze core dump with: gdb /path/to/guacd core.%d",
+                    proc->pid);
+        }
 #endif
+
+        /* Provide specific guidance based on signal type */
+        switch (signum) {
+            case SIGSEGV:
+            case SIGBUS:
+                guacd_log(GUAC_LOG_ERROR,
+                        "[PARENT] Memory access error detected. Check stack trace in logs above.");
+                guacd_log(GUAC_LOG_ERROR,
+                        "[PARENT] This may indicate a null pointer dereference or buffer overflow.");
+                break;
+            case SIGABRT:
+                guacd_log(GUAC_LOG_ERROR,
+                        "[PARENT] Process aborted. This may indicate an assertion failure or fatal error.");
+                break;
+            case SIGILL:
+                guacd_log(GUAC_LOG_ERROR,
+                        "[PARENT] Illegal instruction. This may indicate corrupted code or architecture mismatch.");
+                break;
+            case SIGFPE:
+                guacd_log(GUAC_LOG_ERROR,
+                        "[PARENT] Floating point exception. Check for division by zero or invalid math operations.");
+                break;
+            case SIGPIPE:
+                guacd_log(GUAC_LOG_ERROR,
+                        "[PARENT] Broken pipe. Remote connection may have closed unexpectedly.");
+                break;
+        }
+
+        guacd_log(GUAC_LOG_ERROR,
+                "[PARENT] Enable core dumps with: ulimit -c unlimited");
+        guacd_log(GUAC_LOG_ERROR,
+                "========================================");
+
     } else if (WIFSTOPPED(status)) {
-        guacd_log(GUAC_LOG_ERROR, "child stopped (signal %d)", WSTOPSIG(status));
-    } else {    /* Non-standard case -- may never happen */
-        guacd_log(GUAC_LOG_ERROR, "Unexpected status (0x%x)", status);
+        int signum = WSTOPSIG(status);
+        const char* signal_name = guacd_get_signal_name(signum);
+        guacd_log(GUAC_LOG_WARNING,
+                "[PARENT] Child process PID=%d stopped by signal %d: %s",
+                proc->pid, signum, signal_name);
+    } else {
+        /* Non-standard case -- may never happen */
+        guacd_log(GUAC_LOG_ERROR,
+                "[PARENT] Child process PID=%d terminated with unexpected status: 0x%x",
+                proc->pid, status);
     }
 
 proc_cleanup:
+    guacd_log(GUAC_LOG_DEBUG, "[PARENT] Cleaning up process resources");
     guacd_proc_stop(proc);
     free(proc);
 }
