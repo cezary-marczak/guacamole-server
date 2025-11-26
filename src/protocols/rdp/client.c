@@ -413,6 +413,9 @@ static char* crypto_base64_encode(const BYTE* data, int in_length, size_t* out_l
 // }
 
 int start_recording(const proxyServer* proxy_srv, const char* principal) {
+    // TODO: Implement recording start logic, skip for now
+    return 0;
+
     char* conn_name_base64 = NULL;
 
     if (proxy_srv == NULL || proxy_srv->guacamole_client == NULL) {
@@ -545,6 +548,9 @@ int start_recording(const proxyServer* proxy_srv, const char* principal) {
 
 int read_guac_init(void* cl, const char* auth_filename, void* srv)
 {
+    // TODO: Read file passed in auth_filename
+    return 1;
+
     guac_client* client = cl;
     guac_client_log(client, GUAC_LOG_INFO,"auth filename %p\n", auth_filename);
     proxyServer* proxy_srv = srv;
